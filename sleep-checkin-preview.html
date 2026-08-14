@@ -1,0 +1,474 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>睡眠打卡</title>
+<style>
+  :root {
+    --wrap-bg: #EFE6D8;
+    --wrap-text: #2D1F14;
+    --wrap-muted: #9C856B;
+    --wrap-card: #FFFCF8;
+    --wrap-line: rgba(123, 79, 44, 0.12);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --wrap-bg: #221A12;
+      --wrap-text: #F5EDE3;
+      --wrap-muted: #A8936F;
+      --wrap-card: #2E241A;
+      --wrap-line: rgba(245, 237, 227, 0.14);
+    }
+  }
+  :root[data-theme="dark"] {
+    --wrap-bg: #221A12;
+    --wrap-text: #F5EDE3;
+    --wrap-muted: #A8936F;
+    --wrap-card: #2E241A;
+    --wrap-line: rgba(245, 237, 227, 0.14);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Noto Sans SC', 'Source Han Sans SC', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    background: var(--wrap-bg);
+    color: var(--wrap-text);
+    padding: 40px 20px 56px;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .layout {
+    display: grid;
+    grid-template-columns: auto minmax(280px, 340px);
+    gap: 36px;
+    justify-content: center;
+    align-items: start;
+  }
+
+  /* ── 左侧：手机预览 ── */
+  .phone {
+    width: 390px;
+    background: #F5EDE3;
+    border-radius: 44px;
+    border: 10px solid #2D1F14;
+    box-shadow: 0 18px 48px rgba(31, 20, 10, 0.22);
+    overflow: hidden;
+    padding-bottom: 28px;
+  }
+
+  .statusbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 26px 6px;
+    font-family: 'Inter', -apple-system, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: #2D1F14;
+  }
+  .statusbar .dots { display: flex; gap: 4px; align-items: center; }
+  .statusbar .dots i { width: 5px; height: 5px; border-radius: 50%; background: #2D1F14; display: block; }
+  .statusbar .batt { width: 22px; height: 11px; border: 1.5px solid #2D1F14; border-radius: 3px; position: relative; }
+  .statusbar .batt::after { content: ''; position: absolute; right: -4px; top: 2px; width: 2px; height: 5px; background: #2D1F14; border-radius: 1px; }
+  .statusbar .batt i { position: absolute; left: 1.5px; top: 1.5px; bottom: 1.5px; width: 65%; background: #2D1F14; border-radius: 1px; }
+
+  .app-head { padding: 18px 24px 6px; }
+  .app-head h2 { font-family: 'Noto Serif SC', 'STSong', 'SimSun', serif; font-size: 22px; font-weight: 700; color: #2D1F14; }
+  .app-head p { font-size: 12px; color: #9C856B; margin-top: 2px; }
+
+  .card {
+    background: #FFFCF8;
+    border-radius: 20px;
+    padding: 16px;
+    margin: 12px 16px 0;
+    box-shadow: 0 2px 12px rgba(31, 20, 10, 0.07);
+  }
+
+  .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .card-head .l { display: flex; align-items: center; gap: 10px; }
+  .card-head h3 { font-family: 'Noto Serif SC', 'STSong', serif; font-size: 16px; font-weight: 600; color: #2D1F14; }
+  .badge { font-size: 11px; color: #9C856B; }
+  .badge.warn { color: #D4A03E; font-weight: 500; }
+  .badge.ok { color: #52784B; font-weight: 500; }
+
+  /* ── 今日心绪（压缩） ── */
+  .mood-row { display: flex; justify-content: space-around; }
+  .mood { display: flex; flex-direction: column; align-items: center; gap: 5px; font-size: 10px; color: #6B5644; }
+  .mood.sel { color: #7B4F2C; font-weight: 600; }
+  .mood.sel .face { outline: 2px solid #7B4F2C; outline-offset: 2px; border-radius: 50%; }
+
+  /* ── 睡眠打卡卡（本次设计主角） ── */
+  .sleep-iconbox {
+    width: 30px; height: 30px; border-radius: 9px;
+    background: #6E93C0; display: flex; align-items: center; justify-content: center;
+  }
+
+  .sleep-caption { font-size: 10.5px; color: #9C856B; margin: -6px 0 12px; padding-left: 40px; line-height: 1.5; }
+
+  .btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .check-btn {
+    border: 1.5px dashed rgba(123, 79, 44, 0.28);
+    background: #FFFCF8;
+    border-radius: 14px;
+    padding: 14px 10px 12px;
+    cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    font-family: inherit;
+    transition: transform 0.15s ease;
+  }
+  .check-btn:hover { transform: translateY(-1px); }
+  .check-btn:focus-visible { outline: 2px solid #7B4F2C; outline-offset: 2px; }
+  .check-btn .t { font-size: 12.5px; font-weight: 500; color: #6B5644; }
+  .check-btn .sub { font-size: 10px; color: #9C856B; }
+  .check-btn .time { font-family: 'Inter', sans-serif; font-size: 19px; font-weight: 600; letter-spacing: 0.02em; }
+  .check-btn.empty .time { color: #C4B49B; font-size: 12px; font-weight: 400; letter-spacing: 0; }
+
+  .check-btn.night.checked { border: 1.5px solid rgba(110, 147, 192, 0.55); background: rgba(110, 147, 192, 0.10); }
+  .check-btn.night.checked .time { color: #4A6B9E; }
+  .check-btn.dawn.checked { border: 1.5px solid rgba(212, 160, 62, 0.6); background: rgba(212, 160, 62, 0.12); }
+  .check-btn.dawn.checked .time { color: #B8763A; }
+
+  /* 时间选择面板 */
+  .picker {
+    margin-top: 12px;
+    background: rgba(123, 79, 44, 0.035);
+    border: 1px solid rgba(123, 79, 44, 0.10);
+    border-radius: 14px;
+    padding: 12px;
+  }
+  .picker-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .picker-head span { font-size: 11.5px; font-weight: 500; color: #6B5644; }
+  .picker-head button { border: none; background: rgba(123,79,44,0.08); width: 22px; height: 22px; border-radius: 11px; cursor: pointer; color: #9C856B; font-size: 11px; line-height: 1; }
+  .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+  .chip {
+    border: 1px solid rgba(123, 79, 44, 0.18);
+    background: #FFFCF8; border-radius: 10px;
+    padding: 5px 10px; font-family: 'Inter', sans-serif; font-size: 12px;
+    color: #6B5644; cursor: pointer;
+  }
+  .chip:hover { border-color: #7B4F2C; color: #7B4F2C; }
+  .chip:focus-visible { outline: 2px solid #7B4F2C; outline-offset: 1px; }
+  .manual { display: flex; align-items: center; gap: 8px; font-size: 11px; color: #9C856B; }
+  .manual input {
+    border: 1px solid rgba(123, 79, 44, 0.18); border-radius: 10px;
+    padding: 4px 8px; font-family: 'Inter', sans-serif; font-size: 12px; color: #2D1F14; background: #FFFCF8;
+  }
+
+  /* 时长横幅 */
+  .duration {
+    margin-top: 14px;
+    border-radius: 14px;
+    padding: 12px 14px;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .duration.done { background: rgba(123, 79, 44, 0.055); }
+  .duration.pending { background: rgba(212, 160, 62, 0.07); }
+  .duration .lbl { font-size: 11px; color: #9C856B; }
+  .duration .val { font-family: 'Inter', sans-serif; font-size: 21px; font-weight: 700; color: #7B4F2C; margin-top: 2px; }
+  .duration .val small { font-size: 11.5px; font-weight: 500; color: #9C856B; }
+  .duration .hint { font-size: 11px; color: #B8763A; line-height: 1.5; }
+  .quality { font-size: 11px; font-weight: 600; padding: 4px 10px; border-radius: 10px; white-space: nowrap; }
+
+  /* 睡眠目标进度 */
+  .goal { margin-top: 12px; }
+  .goal .row { display: flex; justify-content: space-between; font-size: 10.5px; color: #9C856B; margin-bottom: 5px; }
+  .goal .track { height: 6px; background: #F5EDE3; border-radius: 3px; overflow: hidden; }
+  .goal .fill { height: 100%; background: linear-gradient(90deg, #6E93C0, #D4A03E); border-radius: 3px; transition: width 0.4s ease; }
+
+  /* 近 7 天柱状图 */
+  .weekly { margin-top: 16px; }
+  .weekly .row { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+  .weekly .row h4 { font-family: 'Noto Serif SC', 'STSong', serif; font-size: 13px; font-weight: 600; color: #2D1F14; }
+  .weekly .row span { font-size: 10.5px; color: #9C856B; font-family: 'Inter', sans-serif; }
+  .chart { position: relative; height: 84px; display: flex; align-items: flex-end; gap: 10px; padding-top: 16px; }
+  .target-line { position: absolute; top: 8px; left: 0; right: 0; border-top: 1.5px dashed rgba(212, 160, 62, 0.6); }
+  .target-line span { position: absolute; right: 0; top: -16px; font-size: 9px; color: #C9A04E; }
+  .bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; height: 100%; justify-content: flex-end; }
+  .bar {
+    width: 100%; max-width: 22px; border-radius: 5px 5px 2px 2px;
+    background: rgba(123, 79, 44, 0.22); min-height: 3px;
+    transition: height 0.4s ease;
+  }
+  .bar.low { background: rgba(224, 86, 86, 0.55); }
+  .bar.last { background: #6E93C0; }
+  .bar.last.pending-bar { background: repeating-linear-gradient(45deg, rgba(110,147,192,0.25) 0 4px, rgba(110,147,192,0.08) 4px 8px); }
+  .bar-col .dl { font-size: 9.5px; color: #9C856B; }
+  .bar-col.today .dl { color: #7B4F2C; font-weight: 600; }
+  .bar-col .vh { font-family: 'Inter', sans-serif; font-size: 9px; color: #7B4F2C; font-weight: 600; }
+
+  /* ── 右侧：说明 ── */
+  .side { display: flex; flex-direction: column; gap: 16px; }
+  .side .intro h1 { font-family: 'Noto Serif SC', 'STSong', serif; font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .side .intro .eyebrow { font-size: 11px; letter-spacing: 0.12em; color: var(--wrap-muted); margin-bottom: 8px; }
+  .side .intro p { font-size: 13px; line-height: 1.7; color: var(--wrap-muted); max-width: 30em; }
+  .notes { background: var(--wrap-card); border: 1px solid var(--wrap-line); border-radius: 16px; padding: 18px; }
+  .notes h4 { font-size: 13px; margin-bottom: 14px; font-family: 'Noto Serif SC', 'STSong', serif; }
+  .note { display: flex; gap: 10px; margin-bottom: 12px; font-size: 12.5px; line-height: 1.65; color: var(--wrap-text); }
+  .note:last-child { margin-bottom: 0; }
+  .note .ico { flex-shrink: 0; width: 22px; height: 22px; border-radius: 7px; display: flex; align-items: center; justify-content: center; font-size: 12px; }
+  .note .ico.m { background: rgba(110,147,192,0.18); }
+  .note .ico.s { background: rgba(212,160,62,0.20); }
+  .note .ico.c { background: rgba(123,79,44,0.10); }
+  .note em { font-style: normal; color: #7B4F2C; font-weight: 600; }
+  .reset { margin-top: 4px; font-size: 11.5px; color: var(--wrap-muted); background: none; border: none; cursor: pointer; text-decoration: underline; text-underline-offset: 3px; font-family: inherit; }
+
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: min(390px, 100%); }
+    .phone { width: min(390px, 100%); border-radius: 36px; }
+    .side { order: -1; }
+    .side .intro h1 { font-size: 22px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bar, .goal .fill, .check-btn { transition: none; }
+  }
+</style>
+
+<div class="layout">
+  <!-- 手机预览 -->
+  <div class="phone">
+    <div class="statusbar">
+      <span>9:41</span>
+      <span class="dots"><i></i><i></i><i></i><span class="batt"><i></i></span></span>
+    </div>
+    <div class="app-head">
+      <h2>今天</h2>
+      <p id="date-label"></p>
+    </div>
+
+    <!-- 今日心绪（已有卡片，压缩展示） -->
+    <div class="card">
+      <div class="card-head">
+        <div class="l"><h3>今日心绪</h3></div>
+        <span class="badge ok">已打卡 ✓</span>
+      </div>
+      <div class="mood-row">
+        <div class="mood"><svg class="face" width="34" height="34" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#E05656"/><circle cx="15" cy="18.5" r="2.2" fill="#FFFCF8"/><circle cx="29" cy="18.5" r="2.2" fill="#FFFCF8"/><path d="M14 26c2.4 4 13.6 4 16 0" stroke="#FFFCF8" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>兴奋</div>
+        <div class="mood"><svg class="face" width="34" height="34" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#ED8A7D"/><circle cx="15" cy="18.5" r="2.2" fill="#FFFCF8"/><circle cx="29" cy="18.5" r="2.2" fill="#FFFCF8"/><path d="M16 27h12" stroke="#FFFCF8" stroke-width="2.2" stroke-linecap="round"/></svg>开心</div>
+        <div class="mood sel"><svg class="face" width="36" height="36" viewBox="0 0 48 48"><circle cx="24" cy="24" r="23" fill="#F0D78A"/><circle cx="16" cy="20" r="2.4" fill="#7B4F2C"/><circle cx="32" cy="20" r="2.4" fill="#7B4F2C"/><path d="M17 30h14" stroke="#7B4F2C" stroke-width="2.4" stroke-linecap="round"/></svg>平静</div>
+        <div class="mood"><svg class="face" width="34" height="34" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#8FB3D9"/><circle cx="15" cy="18.5" r="2.2" fill="#FFFCF8"/><circle cx="29" cy="18.5" r="2.2" fill="#FFFCF8"/><path d="M14 28c2.2-3 13.8-3 16 0" stroke="#FFFCF8" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>低落</div>
+        <div class="mood"><svg class="face" width="34" height="34" viewBox="0 0 44 44"><circle cx="22" cy="22" r="22" fill="#6E93C0"/><circle cx="15" cy="18.5" r="2.2" fill="#FFFCF8"/><circle cx="29" cy="18.5" r="2.2" fill="#FFFCF8"/><path d="M14 30c2.4-4 13.6-4 16 0" stroke="#FFFCF8" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>难过</div>
+      </div>
+    </div>
+
+    <!-- ★ 睡眠打卡（新设计） -->
+    <div class="card">
+      <div class="card-head">
+        <div class="l">
+          <span class="sleep-iconbox">
+            <svg width="17" height="17" viewBox="0 0 24 24" fill="none"><path d="M20 13.5A8.5 8.5 0 0 1 10.5 4a8.5 8.5 0 1 0 9.5 9.5Z" stroke="#FFFCF8" stroke-width="1.7" stroke-linejoin="round"/></svg>
+          </span>
+          <h3>睡眠打卡</h3>
+        </div>
+        <span class="badge" id="sleep-status">昨晚未打卡</span>
+      </div>
+      <p class="sleep-caption">睡觉打卡记的是<b style="color:#6B5644;font-weight:600">前一晚</b>入睡时间，早上补记也行</p>
+
+      <div class="btn-row">
+        <button class="check-btn night empty" id="btn-sleep" aria-label="睡觉打卡">
+          <span class="sub">🌙 昨晚入睡</span>
+          <span class="t">睡觉打卡</span>
+          <span class="time" id="sleep-time">未打卡</span>
+        </button>
+        <button class="check-btn dawn empty" id="btn-wake" aria-label="起床打卡">
+          <span class="sub">☀️ 今早醒来</span>
+          <span class="t">起床打卡</span>
+          <span class="time" id="wake-time">未打卡</span>
+        </button>
+      </div>
+
+      <div class="picker" id="picker" hidden>
+        <div class="picker-head"><span id="picker-title">选择时间</span><button id="picker-close" aria-label="关闭">✕</button></div>
+        <div class="chips" id="chips"></div>
+        <div class="manual">或手动输入 <input type="time" id="manual-time"></div>
+      </div>
+
+      <div class="duration pending" id="duration-box">
+        <div>
+          <div class="lbl" id="duration-lbl">昨晚睡了多久？</div>
+          <div class="val" id="duration-val" style="display:none"></div>
+          <div class="hint" id="duration-hint">还差睡觉打卡与起床打卡</div>
+        </div>
+        <span class="quality" id="quality" style="display:none"></span>
+      </div>
+
+      <div class="goal" id="goal-box" style="display:none">
+        <div class="row"><span>睡眠目标 8 小时</span><span id="goal-pct">0%</span></div>
+        <div class="track"><div class="fill" id="goal-fill" style="width:0%"></div></div>
+      </div>
+
+      <div class="weekly">
+        <div class="row"><h4>近 7 天</h4><span id="avg-label">平均 —</span></div>
+        <div class="chart">
+          <div class="target-line"><span>目标 8h</span></div>
+          <div id="bars"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 右侧说明 -->
+  <div class="side">
+    <div class="intro">
+      <p class="eyebrow">生活手账 · 今天页新模块</p>
+      <h1>睡眠打卡</h1>
+      <p>点两个打卡按钮试试：先记昨晚入睡，再记今早醒来，自动算出睡眠时长并汇入近 7 天图表。</p>
+    </div>
+    <div class="notes">
+      <h4>设计要点</h4>
+      <div class="note"><span class="ico m">🌙</span><span><em>睡觉打卡 = 前一晚入睡时间</em><br>今晚的觉，第二天早上补记也可以。</span></div>
+      <div class="note"><span class="ico s">☀️</span><span><em>起床打卡 = 今天早上醒来时间</em><br>两个都记了才成一条完整的睡眠记录。</span></div>
+      <div class="note"><span class="ico c">📊</span><span><em>自动算时长 + 近 7 天柱状图</em><br>跨午夜自动处理；少于 6.5 小时的柱子会标红提醒。</span></div>
+      <button class="reset" id="reset-btn">重置演示数据</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var state = { sleep: null, wake: null, picker: null }; // picker: 'sleep' | 'wake' | null
+
+  var SLEEP_TIMES = ['21:30','22:00','22:30','23:00','23:30','00:00','00:30','01:00','01:30'];
+  var WAKE_TIMES  = ['05:30','06:00','06:30','07:00','07:30','08:00','08:30','09:00','09:30'];
+
+  // 近 6 天模拟数据（分钟），最后一天是"昨晚"（待打卡）
+  var prevNights = [415, 385, 492, 456, 412, 468];
+
+  function $(s) { return document.querySelector(s); }
+
+  function fmtDur(mins) {
+    var h = Math.floor(mins / 60), m = mins % 60;
+    return h + '小时' + (m ? m + '分' : '');
+  }
+  function durMinutes(s, w) {
+    var s1 = s.split(':').map(Number), w1 = w.split(':').map(Number);
+    var mins = (w1[0]*60 + w1[1]) - (s1[0]*60 + s1[1]);
+    if (mins <= 0) mins += 24*60;
+    return mins;
+  }
+  function quality(h) {
+    if (h >= 8) return { t: '充足', bg: 'rgba(168,196,154,0.28)', color: '#52784B' };
+    if (h >= 6.5) return { t: '正常', bg: 'rgba(212,160,62,0.20)', color: '#B8763A' };
+    return { t: '偏短', bg: 'rgba(224,86,86,0.14)', color: '#C24040' };
+  }
+
+  // 日期与星期
+  var now = new Date();
+  var wk = ['日','一','二','三','四','五','六'];
+  $('#date-label').textContent = (now.getMonth()+1) + '月' + now.getDate() + '日 星期' + wk[now.getDay()];
+
+  function openPicker(kind) {
+    state.picker = kind;
+    $('#picker').hidden = false;
+    $('#picker-title').textContent = kind === 'sleep' ? '选择昨晚入睡时间' : '选择今早醒来时间';
+    var chips = $('#chips'); chips.innerHTML = '';
+    (kind === 'sleep' ? SLEEP_TIMES : WAKE_TIMES).forEach(function (t) {
+      var b = document.createElement('button');
+      b.className = 'chip'; b.textContent = t;
+      b.addEventListener('click', function () { pick(kind, t); });
+      chips.appendChild(b);
+    });
+    $('#manual-time').value = '';
+    var m = $('#manual-time');
+    m.onchange = function () { if (m.value) pick(kind, m.value); };
+  }
+
+  function pick(kind, t) {
+    if (kind === 'sleep') state.sleep = t; else state.wake = t;
+    state.picker = null;
+    $('#picker').hidden = true;
+    render();
+  }
+
+  $('#btn-sleep').addEventListener('click', function () { openPicker('sleep'); });
+  $('#btn-wake').addEventListener('click', function () { openPicker('wake'); });
+  $('#picker-close').addEventListener('click', function () { state.picker = null; $('#picker').hidden = true; });
+  $('#reset-btn').addEventListener('click', function () { state.sleep = null; state.wake = null; state.picker = null; $('#picker').hidden = true; render(); });
+
+  function render() {
+    // 按钮状态
+    var sb = $('#btn-sleep'), wb = $('#btn-wake');
+    sb.classList.toggle('empty', !state.sleep); sb.classList.toggle('checked', !!state.sleep);
+    wb.classList.toggle('empty', !state.wake); wb.classList.toggle('checked', !!state.wake);
+    $('#sleep-time').textContent = state.sleep || '未打卡';
+    $('#wake-time').textContent = state.wake || '未打卡';
+
+    // 状态徽标
+    var st = $('#sleep-status');
+    st.className = 'badge';
+    if (state.sleep && state.wake) { st.textContent = '已打卡 ✓'; st.classList.add('ok'); }
+    else if (state.sleep) { st.textContent = '还差起床打卡'; st.classList.add('warn'); }
+    else if (state.wake) { st.textContent = '还差睡觉打卡'; st.classList.add('warn'); }
+    else { st.textContent = '昨晚未打卡'; st.classList.add('warn'); }
+
+    // 时长横幅
+    var box = $('#duration-box'), val = $('#duration-val'), hint = $('#duration-hint'), lbl = $('#duration-lbl');
+    var q = $('#quality'), goal = $('#goal-box');
+    if (state.sleep && state.wake) {
+      var mins = durMinutes(state.sleep, state.wake);
+      box.className = 'duration done';
+      lbl.textContent = '昨晚睡了 ' + fmtDur(mins);
+      val.style.display = 'block'; val.innerHTML = (mins/60).toFixed(1) + ' <small>小时</small>';
+      hint.textContent = state.sleep + ' → ' + state.wake + '（跨午夜自动计算）';
+      var qu = quality(mins/60);
+      q.style.display = 'inline-block'; q.textContent = qu.t;
+      q.style.background = qu.bg; q.style.color = qu.color;
+      goal.style.display = 'block';
+      var pct = Math.min(100, Math.round((mins/60)/8*100));
+      $('#goal-pct').textContent = pct + '%';
+      $('#goal-fill').style.width = pct + '%';
+    } else {
+      box.className = 'duration pending';
+      lbl.textContent = '昨晚睡了多久？';
+      val.style.display = 'none';
+      q.style.display = 'none';
+      goal.style.display = 'none';
+      if (!state.sleep && !state.wake) hint.textContent = '还差睡觉打卡与起床打卡';
+      else if (!state.sleep) hint.textContent = '还差「睡觉打卡」——昨晚几点睡的？';
+      else hint.textContent = '还差「起床打卡」——今早几点醒的？';
+    }
+
+    // 近7天柱状图
+    var bars = $('#bars');
+    var nights = prevNights.concat(state.sleep && state.wake ? [durMinutes(state.sleep, state.wake)] : [null]);
+    var labels = [];
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(now); d.setDate(d.getDate() - i);
+      labels.push(i === 0 ? '今天' : wk[d.getDay()]);
+    }
+    bars.innerHTML = '';
+    nights.forEach(function (m, i) {
+      var col = document.createElement('div');
+      col.className = 'bar-col' + (i === 6 ? ' today' : '');
+      var isLast = i === 6;
+      if (m === null) {
+        var ph = document.createElement('div');
+        ph.className = 'bar last pending-bar'; ph.style.height = '12%';
+        ph.title = '昨晚未打卡';
+        col.appendChild(ph);
+      } else {
+        var h = Math.max(4, Math.min(100, m / 600 * 100));
+        var b = document.createElement('div');
+        b.className = 'bar' + (isLast ? ' last' : '') + (m < 390 ? ' low' : '');
+        b.style.height = h + '%';
+        b.title = labels[i] + ' · ' + fmtDur(m);
+        col.appendChild(b);
+        if (isLast) {
+          var vh = document.createElement('div');
+          vh.className = 'vh'; vh.textContent = (m/60).toFixed(1) + 'h';
+          col.appendChild(vh);
+        }
+      }
+      var dl = document.createElement('div');
+      dl.className = 'dl'; dl.textContent = labels[i];
+      col.appendChild(dl);
+      bars.appendChild(col);
+    });
+
+    // 平均
+    var valid = nights.filter(function (m) { return m !== null; });
+    var avg = valid.length ? valid.reduce(function (a, b) { return a + b; }, 0) / valid.length / 60 : null;
+    $('#avg-label').textContent = avg ? '平均 ' + avg.toFixed(1) + ' 小时' : '平均 —';
+  }
+
+  render();
+})();
+</script>

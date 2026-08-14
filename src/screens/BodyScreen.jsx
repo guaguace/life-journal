@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import { IconPlus, IconExercise, IconPeriod, IconDiet } from '../Icons'
+import SleepCard from '../components/SleepCard'
 
 const FILTERS = [
   { key: 'exercise', label: '运动记' },
@@ -7,7 +8,7 @@ const FILTERS = [
   { key: 'diet', label: '食光' },
 ]
 
-export function BodyScreen({ onOpenModal, exerciseRecords, periodRecords, dietRecords }) {
+export function BodyScreen({ onOpenModal, exerciseRecords, periodRecords, dietRecords, sleepRecords, onSleepRecord, todayKey }) {
   const [activeFilter, setActiveFilter] = useState('exercise')
 
   const totalDuration = exerciseRecords.reduce((s, r) => s + r.duration, 0)
@@ -28,7 +29,10 @@ export function BodyScreen({ onOpenModal, exerciseRecords, periodRecords, dietRe
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+      {/* ── 睡眠打卡（始终置顶显示） ── */}
+      <SleepCard dateKey={todayKey} records={sleepRecords || {}} onRecord={onSleepRecord || (() => {})} />
+
+      <div style={{ display: 'flex', gap: 8, margin: '20px 0' }}>
         {FILTERS.map((f) => (
           <button key={f.key} onClick={() => setActiveFilter(f.key)}
             className={`chip ${activeFilter === f.key ? 'chip-filled' : 'chip-soft'}`}

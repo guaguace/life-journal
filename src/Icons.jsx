@@ -111,6 +111,27 @@ export const IconDiet = ({ size = 26 }) => (
   </svg>
 );
 
+/* ── 睡眠打卡图标 ── */
+export const IconMoon = ({ size = 26 }) => (
+  <svg width={size} height={size} viewBox="0 0 26 26" fill="none">
+    <rect width="26" height="26" rx="8" fill="#6E93C0"/>
+    <path d="M18.5 15.5A7.5 7.5 0 0 1 10.5 7.5 7.5 7.5 0 1 0 18.5 15.5Z" stroke="#FFFCF8" strokeWidth="1.4" strokeLinejoin="round"/>
+  </svg>
+);
+
+export const IconMoonSmall = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <path d="M13 10.5A6.5 6.5 0 0 1 5.5 3a6.5 6.5 0 1 0 7.5 7.5Z" stroke={color} strokeWidth="1.4" strokeLinejoin="round"/>
+  </svg>
+);
+
+export const IconSun = ({ size = 16, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 16 16" fill="none">
+    <circle cx="8" cy="8" r="2.8" stroke={color} strokeWidth="1.4"/>
+    <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2M3.4 3.4l1.4 1.4M11.2 11.2l1.4 1.4M12.6 3.4l-1.4 1.4M4.8 11.2l-1.4 1.4" stroke={color} strokeWidth="1.3" strokeLinecap="round"/>
+  </svg>
+);
+
 /* ── 心情表情图标 (颜色匹配新版 design-tokens.json moodCard.options.faceColor) ── */
 /* excited / 兴奋 — faceColor: #E05656 */
 export const MoodHappy = ({ size = 44 }) => (

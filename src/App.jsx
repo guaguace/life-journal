@@ -87,6 +87,8 @@ export default function App() {
     { id: 2, meal: '午餐', content: '鸡胸肉沙拉 + 全麦面包', cal: 580 },
     { id: 3, meal: '晚餐', content: '清蒸鱼 + 西兰花 + 糙米饭', cal: 680 },
   ])
+  // 睡眠记录：key 为日期（起床当天），值为 { sleepTime: 前一晚入睡, wakeTime: 当天早上醒来 }
+  const [sleepRecords, setSleepRecords] = useStoredState('sleepRecords', {})
 
   const td = new Date()
   const todayKey = `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`
@@ -95,6 +97,9 @@ export default function App() {
   const handleMoodChange = useCallback((dateKey, mood) => { setMoodHistory(p => ({ ...p, [dateKey]: mood })) }, [])
   const handleCalendarTodosChange = useCallback((dateKey, todos) => {
     setCalendarTodos(p => { const n = { ...p }; if (todos.length === 0) delete n[dateKey]; else n[dateKey] = todos; return n })
+  }, [])
+  const handleSleepRecord = useCallback((dateKey, record) => {
+    setSleepRecords(p => ({ ...p, [dateKey]: record }))
   }, [])
   const getDateTodos = (dateKey) => calendarTodos[dateKey] || []
 
@@ -106,6 +111,7 @@ export default function App() {
     calendarTodos, onCalendarTodosChange: handleCalendarTodosChange, openDateModal,
     inspirations, setInspirations, musings, setMusings,
     exerciseRecords, setExerciseRecords, periodRecords, setPeriodRecords, dietRecords, setDietRecords,
+    sleepRecords, onSleepRecord: handleSleepRecord,
   }
 
   // 移动端检测
