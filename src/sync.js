@@ -50,6 +50,14 @@ function headers(cfg) {
   }
 }
 
+/* 归一化 URL：兼容用户粘贴带 /rest/v1 后缀或多余斜杠的地址 */
+function baseUrl(cfg) {
+  return (cfg.url || '')
+    .trim()
+    .replace(/\/+$/, '')
+    .replace(/\/rest\/v1$/, '')
+}
+
 /* 上传本地数据到云端（整体覆盖，last-write-wins） */
 export async function pushToCloud() {
   const cfg = getSyncConfig()
@@ -57,7 +65,7 @@ export async function pushToCloud() {
   const data = collectData()
   if (Object.keys(data).length === 0) return { ok: true, msg: '本地无数据，跳过上传' }
   try {
-    const res = await fetch(`${cfg.url.replace(/\/$/, '')}/rest/v1/journals`, {
+    const res = await fetch(`${baseUrl(cfg)}/rest/v1/journals`, {
       method: 'POST',
       headers: headers(cfg),
       body: JSON.stringify([{ id: cfg.code, data, updated_at: new Date().toISOString() }]),
@@ -75,7 +83,7 @@ export async function pullFromCloud() {
   const cfg = getSyncConfig()
   if (!cfg) return { ok: false, msg: '未配置云端同步' }
   try {
-    const url = `${cfg.url.replace(/\/$/, '')}/rest/v1/journals?id=eq.${encodeURIComponent(cfg.code)}&select=data,updated_at`
+    const url = `${baseUrl(cfg)}/rest/v1/journals?id=eq.${encodeURIComponent(cfg.code)}&select=data,updated_at`
     const res = await fetch(url, { headers: headers(cfg) })
     if (!res.ok) return { ok: false, msg: '下载失败 HTTP ' + res.status + '，请检查配置' }
     const rows = await res.json()
