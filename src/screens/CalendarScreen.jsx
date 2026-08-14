@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { IconPlus, IconTrash, IconChevronDown } from '../Icons'
+import GoalDetailModal from '../modals/GoalDetailModal'
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
 const MONTHS = ['1月','2月','3月','4月','5月','6月','7月','8月','9月','10月','11月','12月']
-const GOAL_CHIPS = ['读完 12 本书', '学会游泳', '去一次海边', '存下旅行基金']
 
 /* 获取某月天数 */
 function getDaysInMonth(year, month) {
@@ -77,28 +77,23 @@ function MonthCalendar({ year, month, onPrevMonth, onNextMonth, calendarTodos, o
   )
 }
 
-export function CalendarScreen({ calendarTodos, onCalendarTodosChange, openDateModal }) {
+export function CalendarScreen({ calendarTodos, onCalendarTodosChange, openDateModal, goals, onAddGoal, onDeleteGoal, onUpdateGoal }) {
   const now = new Date()
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [showYearPicker, setShowYearPicker] = useState(false)
-  // 年度目标：localStorage 持久化，支持增删
-  const [goals, setGoals] = useState(() => {
-    try {
-      const s = localStorage.getItem('lifejournal_goals')
-      return s ? JSON.parse(s) : GOAL_CHIPS
-    } catch (e) { return GOAL_CHIPS }
-  })
-  useEffect(() => {
-    try { localStorage.setItem('lifejournal_goals', JSON.stringify(goals)) } catch (e) {}
-  }, [goals])
+  const [detailGoal, setDetailGoal] = useState(null)
 
   const handlePrevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1) } else setMonth(m => m - 1) }
   const handleNextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1) } else setMonth(m => m + 1) }
-  const handleAddGoal = () => { const g = prompt('输入新的年度目标：'); if (g && g.trim()) setGoals(prev => [...prev, g.trim()]) }
-  const handleDeleteGoal = (idx) => {
-    if (confirm('删除这个目标？')) setGoals(prev => prev.filter((_, i) => i !== idx))
+  const handleAddGoal = () => { const g = prompt('输入新的年度目标：'); if (g && g.trim()) onAddGoal(g) }
+  const handleDeleteGoal = (id) => {
+    if (confirm('删除这个目标？')) onDeleteGoal(id)
   }
+
+  /* 目标完成统计 */
+  const completedCount = (goals || []).filter(g => g.done || (g.items || []).filter(i => i.done).length >= (g.target || 1)).length
+  const goalDoneCount = (g) => (g.items || []).filter(i => i.done).length
 
   const cy = now.getFullYear()
   const yearOptions = [cy-2, cy-1, cy, cy+1, cy+2]
@@ -154,27 +149,50 @@ export function CalendarScreen({ calendarTodos, onCalendarTodosChange, openDateM
             <p style={{ fontSize: 'var(--fs-caption)', fontFamily: 'var(--font-body)', color: '#9C856B', marginTop: 2 }}>今年想完成的 12 件小事，慢慢来</p>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span className="card-badge">6 / 12 项</span>
+            <span className="card-badge">{completedCount} / {(goals || []).length} 项</span>
             <button onClick={handleAddGoal} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 4, borderRadius: 8, display: 'flex', color: '#7B4F2C' }} title="添加目标"><IconPlus color="#7B4F2C" size={18} /></button>
           </div>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {goals.map((chip, i) => (
-            <span key={i} className="chip chip-soft" style={{ position: 'relative', paddingRight: 24, gap: 0 }}>
-              {chip}
-              <button
-                onClick={(e) => { e.stopPropagation(); handleDeleteGoal(i) }}
-                title="删除目标"
-                style={{
-                  position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
-                  border: 'none', background: 'rgba(123,79,44,0.08)', borderRadius: '50%',
-                  width: 16, height: 16, cursor: 'pointer', display: 'flex',
-                  alignItems: 'center', justifyContent: 'center',
-                  color: '#9C856B', fontSize: 9, padding: 0, lineHeight: 1,
-                }}
-              >✕</button>
-            </span>
-          ))}
+          {(goals || []).map((g) => {
+            const done = goalDoneCount(g)
+            const complete = g.done || done >= (g.target || 1)
+            return (
+              <span key={g.id} style={{ position: 'relative', display: 'inline-flex' }}>
+                <button
+                  onClick={() => setDetailGoal(g)}
+                  className="chip"
+                  title={g.target > 1 ? `点击查看细则（${done}/${g.target}）` : '点击查看细则'}
+                  style={{
+                    border: 'none', cursor: 'pointer', fontFamily: 'var(--font-body)',
+                    background: complete ? 'rgba(168,196,154,0.25)' : '#F5EDE3',
+                    color: complete ? '#52784B' : '#6B5644',
+                    paddingRight: 26,
+                    textDecoration: complete ? 'none' : 'none',
+                    gap: 5,
+                  }}
+                >
+                  {g.title}
+                  {complete ? (
+                    <span style={{ fontSize: 10, fontWeight: 700 }}>✓</span>
+                  ) : g.target > 1 ? (
+                    <span style={{ fontSize: 10, fontFamily: 'var(--font-number)', opacity: 0.75 }}>{done}/{g.target}</span>
+                  ) : null}
+                </button>
+                <button
+                  onClick={() => handleDeleteGoal(g.id)}
+                  title="删除目标"
+                  style={{
+                    position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
+                    border: 'none', background: 'rgba(123,79,44,0.1)', borderRadius: '50%',
+                    width: 16, height: 16, cursor: 'pointer', display: 'flex',
+                    alignItems: 'center', justifyContent: 'center',
+                    color: '#9C856B', fontSize: 9, padding: 0, lineHeight: 1, zIndex: 2,
+                  }}
+                >✕</button>
+              </span>
+            )
+          })}
         </div>
       </div>
 
@@ -233,6 +251,14 @@ export function CalendarScreen({ calendarTodos, onCalendarTodosChange, openDateM
           </div>
         )}
       </div>
+
+      {/* 目标详情弹层 */}
+      <GoalDetailModal
+        isOpen={!!detailGoal}
+        onClose={() => setDetailGoal(null)}
+        goal={detailGoal}
+        onUpdate={onUpdateGoal}
+      />
     </>
   )
 }

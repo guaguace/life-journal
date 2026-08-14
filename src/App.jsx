@@ -102,6 +102,16 @@ export default function App() {
   ])
   // 睡眠记录：key 为日期（起床当天），值为 { sleepTime: 前一晚入睡, wakeTime: 当天早上醒来 }
   const [sleepRecords, setSleepRecords] = useStoredState('sleepRecords', {})
+  // 年度目标（首页年度清单 + 月历年度目标共享）
+  const [goals, setGoals] = useStoredState('goals', [
+    { id: 1, title: '读完 12 本书', done: false, target: 12, items: [
+      { id: 11, text: '《存在主义咖啡馆》', done: true },
+      { id: 12, text: '《活着》', done: true },
+    ]},
+    { id: 2, title: '学会游泳', done: false, target: 1, items: [] },
+    { id: 3, title: '去一次海边', done: false, target: 1, items: [] },
+    { id: 4, title: '存下旅行基金', done: false, target: 1, items: [] },
+  ])
 
   const td = new Date()
   const todayKey = `${td.getFullYear()}-${String(td.getMonth()+1).padStart(2,'0')}-${String(td.getDate()).padStart(2,'0')}`
@@ -114,6 +124,15 @@ export default function App() {
   const handleSleepRecord = useCallback((dateKey, record) => {
     setSleepRecords(p => ({ ...p, [dateKey]: record }))
   }, [])
+  const handleAddGoal = useCallback((title) => {
+    setGoals(p => [...p, { id: Date.now(), title: title.trim(), done: false, target: 1, items: [] }])
+  }, [])
+  const handleDeleteGoal = useCallback((id) => {
+    setGoals(p => p.filter(g => g.id !== id))
+  }, [])
+  const handleUpdateGoal = useCallback((id, patch) => {
+    setGoals(p => p.map(g => g.id === id ? { ...g, ...patch } : g))
+  }, [])
   const getDateTodos = (dateKey) => calendarTodos[dateKey] || []
 
   const ActiveScreen = SCREENS[activeTab]
@@ -125,6 +144,7 @@ export default function App() {
     inspirations, setInspirations, musings, setMusings,
     exerciseRecords, setExerciseRecords, periodRecords, setPeriodRecords, dietRecords, setDietRecords,
     sleepRecords, onSleepRecord: handleSleepRecord,
+    goals, onAddGoal: handleAddGoal, onDeleteGoal: handleDeleteGoal, onUpdateGoal: handleUpdateGoal,
   }
 
   // 启动时若已启用云端同步：从云端拉取最新数据

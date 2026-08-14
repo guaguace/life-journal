@@ -171,30 +171,68 @@ function TodoCard({ todayKey, calendarTodos, onCalendarTodosChange }) {
   )
 }
 
-/* 年度清单：汇总 calendarTodos 中所有 todo 的完成进度 */
-function GoalsCard({ calendarTodos }) {
-  const allTodos = Object.values(calendarTodos).flat()
-  const done = allTodos.filter(t => t.done).length
-  const total = allTodos.length
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0
+/* 年度清单：与月历「年度目标系列」共享同一份数据 */
+function GoalsCard({ goals }) {
+  const list = goals || []
+  const completed = list.filter(g => g.done || (g.items || []).filter(i => i.done).length >= (g.target || 1)).length
+  const pct = list.length > 0 ? Math.round((completed / list.length) * 100) : 0
 
   return (
     <div className="card">
       <div className="card-header">
         <h3 className="card-title">年度清单</h3>
-        <span className="card-badge">{done}/{total}</span>
+        <span className="card-badge">{completed}/{list.length}</span>
       </div>
       <div className="progress-bar">
         <div className="progress-bar-fill" style={{ width: `${pct}%` }} />
       </div>
-      <p style={{ marginTop: 10, fontSize: 'var(--fs-caption)', fontFamily: 'var(--font-body)', color: 'var(--text-disabled)' }}>
-        {total === 0 ? '去月历添加待办吧 🌱' : `已完成 ${done} 项，继续加油 🌱`}
-      </p>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 14 }}>
+        {list.length === 0 && (
+          <p style={{ fontSize: 'var(--fs-caption)', fontFamily: 'var(--font-body)', color: '#9C856B', textAlign: 'center', padding: '8px 0' }}>
+            去月历添加年度目标吧 🌱
+          </p>
+        )}
+        {list.map(g => {
+          const done = (g.items || []).filter(i => i.done).length
+          const complete = g.done || done >= (g.target || 1)
+          const gpct = g.target > 1 ? Math.min(100, Math.round((done / g.target) * 100)) : (complete ? 100 : 0)
+          return (
+            <div key={g.id}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                <span style={{
+                  flex: 1, fontSize: 'var(--fs-body)', fontFamily: 'var(--font-body)',
+                  color: complete ? '#9C856B' : '#2D1F14',
+                  textDecoration: complete ? 'line-through' : 'none',
+                  overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                }}>{g.title}</span>
+                {complete ? (
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, color: '#52784B',
+                    background: 'rgba(168,196,154,0.25)', padding: '2px 8px', borderRadius: 8,
+                    flexShrink: 0,
+                  }}>✓ 已完成</span>
+                ) : g.target > 1 ? (
+                  <span style={{
+                    fontSize: 10, fontFamily: 'var(--font-number)', color: '#9C856B', flexShrink: 0,
+                  }}>{done}/{g.target}</span>
+                ) : null}
+              </div>
+              <div style={{ height: 4, background: '#F5EDE3', borderRadius: 2, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%', width: gpct + '%', borderRadius: 2,
+                  background: complete ? '#A8C49A' : '#D4A03E',
+                  transition: 'width 0.4s ease',
+                }} />
+              </div>
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }
 
-export function TodayScreen({ todayKey, moodHistory, onMoodChange, calendarTodos, onCalendarTodosChange }) {
+export function TodayScreen({ todayKey, moodHistory, onMoodChange, calendarTodos, onCalendarTodosChange, goals }) {
   const weekdays = ['日','一','二','三','四','五','六']
   const d = new Date()
 
@@ -207,7 +245,7 @@ export function TodayScreen({ todayKey, moodHistory, onMoodChange, calendarTodos
       <MoodSelector todayKey={todayKey} moodHistory={moodHistory} onMoodChange={onMoodChange} />
       <AIChatCard />
       <TodoCard todayKey={todayKey} calendarTodos={calendarTodos} onCalendarTodosChange={onCalendarTodosChange} />
-      <GoalsCard calendarTodos={calendarTodos} />
+      <GoalsCard goals={goals} />
     </>
   )
 }
