@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { IconPlus, IconTrash, IconChevronDown } from '../Icons'
 
 const WEEKDAYS = ['日', '一', '二', '三', '四', '五', '六']
@@ -82,11 +82,23 @@ export function CalendarScreen({ calendarTodos, onCalendarTodosChange, openDateM
   const [year, setYear] = useState(now.getFullYear())
   const [month, setMonth] = useState(now.getMonth() + 1)
   const [showYearPicker, setShowYearPicker] = useState(false)
-  const [goals, setGoals] = useState(GOAL_CHIPS)
+  // 年度目标：localStorage 持久化，支持增删
+  const [goals, setGoals] = useState(() => {
+    try {
+      const s = localStorage.getItem('lifejournal_goals')
+      return s ? JSON.parse(s) : GOAL_CHIPS
+    } catch (e) { return GOAL_CHIPS }
+  })
+  useEffect(() => {
+    try { localStorage.setItem('lifejournal_goals', JSON.stringify(goals)) } catch (e) {}
+  }, [goals])
 
   const handlePrevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1) } else setMonth(m => m - 1) }
   const handleNextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1) } else setMonth(m => m + 1) }
   const handleAddGoal = () => { const g = prompt('输入新的年度目标：'); if (g && g.trim()) setGoals(prev => [...prev, g.trim()]) }
+  const handleDeleteGoal = (idx) => {
+    if (confirm('删除这个目标？')) setGoals(prev => prev.filter((_, i) => i !== idx))
+  }
 
   const cy = now.getFullYear()
   const yearOptions = [cy-2, cy-1, cy, cy+1, cy+2]
@@ -146,7 +158,24 @@ export function CalendarScreen({ calendarTodos, onCalendarTodosChange, openDateM
             <button onClick={handleAddGoal} style={{ border: 'none', background: 'transparent', cursor: 'pointer', padding: 4, borderRadius: 8, display: 'flex', color: '#7B4F2C' }} title="添加目标"><IconPlus color="#7B4F2C" size={18} /></button>
           </div>
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{goals.map((chip, i) => <span key={i} className="chip chip-soft">{chip}</span>)}</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {goals.map((chip, i) => (
+            <span key={i} className="chip chip-soft" style={{ position: 'relative', paddingRight: 24, gap: 0 }}>
+              {chip}
+              <button
+                onClick={(e) => { e.stopPropagation(); handleDeleteGoal(i) }}
+                title="删除目标"
+                style={{
+                  position: 'absolute', right: 4, top: '50%', transform: 'translateY(-50%)',
+                  border: 'none', background: 'rgba(123,79,44,0.08)', borderRadius: '50%',
+                  width: 16, height: 16, cursor: 'pointer', display: 'flex',
+                  alignItems: 'center', justifyContent: 'center',
+                  color: '#9C856B', fontSize: 9, padding: 0, lineHeight: 1,
+                }}
+              >✕</button>
+            </span>
+          ))}
+        </div>
       </div>
 
       {/* ── 月度待办 → 小方块卡片展示 ── */}

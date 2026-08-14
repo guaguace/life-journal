@@ -42,7 +42,14 @@ function MoodSelector({ todayKey, moodHistory, onMoodChange }) {
                 transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
-              <Icon size={isSelected ? 52 : 40} />
+              {/* 固定 44px 槽位 + transform 缩放，选中不引起布局跳变 */}
+              <span style={{
+                height: 44, display: 'flex', alignItems: 'center',
+                transform: isSelected ? 'scale(1.15)' : 'scale(1)',
+                transition: 'transform 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}>
+                <Icon size={44} />
+              </span>
               <span style={{
                 fontSize: 'var(--fs-mood-label)', fontFamily: 'var(--font-body)',
                 fontWeight: isSelected ? 600 : 400,
@@ -72,30 +79,65 @@ function AIChatCard() {
   )
 }
 
-/* 今日待办：与月历共享 calendarTodos，读写今天日期的待办 */
+/* 近期待办：优先显示今日，今日为空则显示离今天最近的待办 */
 function TodoCard({ todayKey, calendarTodos, onCalendarTodosChange }) {
-  const todos = calendarTodos[todayKey] || []
+  const todayTodos = calendarTodos[todayKey] || []
 
-  const handleToggle = (id) => {
-    const updated = todos.map(t => t.id === id ? { ...t, done: !t.done } : t)
-    onCalendarTodosChange(todayKey, updated)
+  // 决定展示哪一天的待办
+  let displayKey = null
+  let displayTodos = []
+  let isTodayView = false
+
+  if (todayTodos.length > 0) {
+    displayKey = todayKey
+    displayTodos = todayTodos
+    isTodayView = true
+  } else {
+    // 找离今天最近的日期（优先未来）
+    const now = new Date(todayKey + 'T12:00:00')
+    let best = null, bestDist = Infinity
+    for (const [dk, ts] of Object.entries(calendarTodos)) {
+      if (!ts || ts.length === 0) continue
+      const d = new Date(dk + 'T12:00:00')
+      const dist = Math.abs(d - now)
+      if (dist < bestDist || (dist === bestDist && d >= now && new Date(best + 'T12:00:00') < now)) {
+        bestDist = dist
+        best = dk
+      }
+    }
+    if (best) { displayKey = best; displayTodos = calendarTodos[best] }
   }
 
-  const doneCount = todos.filter(t => t.done).length
+  const handleToggle = (id) => {
+    const updated = displayTodos.map(t => t.id === id ? { ...t, done: !t.done } : t)
+    onCalendarTodosChange(displayKey, updated)
+  }
+
+  const doneCount = displayTodos.filter(t => t.done).length
+
+  /* 日期显示文案 */
+  const dateLabel = (() => {
+    if (!displayKey) return ''
+    if (displayKey === todayKey) return '今天'
+    const [, m, d] = displayKey.split('-')
+    return `${parseInt(m)}月${parseInt(d)}日`
+  })()
 
   return (
     <div className="card">
       <div className="card-header">
-        <h3 className="card-title">今日待办</h3>
-        <span className="card-badge">{doneCount}/{todos.length}</span>
+        <h3 className="card-title">近期待办</h3>
+        <span className="card-badge">
+          {displayKey ? `${dateLabel} · ${doneCount}/${displayTodos.length}` : '0/0'}
+        </span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {todos.length === 0 && (
+        {displayTodos.length === 0 && (
           <p style={{ textAlign: 'center', color: '#9C856B', padding: '16px 0', fontSize: 'var(--fs-body)' }}>
-            今天还没有待办 · 去月历页面添加
+            近期没有待办 · 去月历页面添加
           </p>
         )}
-        {todos.map((todo) => (
+        {displayTodos.map((todo) => (
           <div key={todo.id} onClick={() => handleToggle(todo.id)} style={{
             display: 'flex', alignItems: 'center', gap: 10, background: '#FFFCF8',
             borderRadius: 12, padding: '12px 12px', height: 44, cursor: 'pointer',
@@ -105,9 +147,18 @@ function TodoCard({ todayKey, calendarTodos, onCalendarTodosChange }) {
               border: todo.done ? 'none' : '2px solid #7B4F2C',
               background: todo.done ? '#7B4F2C' : 'transparent',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.2s ease',
             }}>
               {todo.done && <IconCheck size={14} />}
             </div>
+            {/* 非今日的待办显示日期标记 */}
+            {!isTodayView && (
+              <span style={{
+                fontSize: 10, fontFamily: 'var(--font-number)', color: '#9C856B',
+                background: 'rgba(123,79,44,0.05)', padding: '2px 7px', borderRadius: 7,
+                flexShrink: 0,
+              }}>{dateLabel}</span>
+            )}
             <span style={{
               flex: 1, fontSize: 'var(--fs-body)', fontFamily: 'var(--font-body)',
               color: todo.done ? '#9C856B' : 'var(--text-primary)',
