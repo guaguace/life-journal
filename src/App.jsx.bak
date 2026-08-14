@@ -1,0 +1,212 @@
+import React, { useState, useCallback, Component } from 'react'
+
+/* 错误边界：捕获渲染错误避免白屏 */
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(error) { return { error } }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{ padding: 40, fontFamily: 'system-ui', color: '#2D1F14', background: '#F5EDE3', minHeight: '100vh' }}>
+          <h2 style={{ color: '#E05656', marginBottom: 12 }}>页面渲染出错</h2>
+          <pre style={{ background: '#FFFCF8', padding: 16, borderRadius: 12, fontSize: 13, overflow: 'auto', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
+            {this.state.error.message}
+            {'\n\n'}
+            {this.state.error.stack}
+          </pre>
+          <button onClick={() => this.setState({ error: null })} style={{ marginTop: 16, padding: '10px 20px', background: '#7B4F2C', color: '#FFFCF8', border: 'none', borderRadius: 10, cursor: 'pointer', fontSize: 14 }}>重试</button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
+import { tabIcons } from './Icons'
+import { TodayScreen } from './screens/TodayScreen'
+import { MoodScreen } from './screens/MoodScreen'
+import { CalendarScreen } from './screens/CalendarScreen'
+import { BodyScreen } from './screens/BodyScreen'
+import { InspirationScreen } from './screens/InspirationScreen'
+import DateTodoModal from './modals/DateTodoModal'
+import ExerciseRecordModal from './modals/ExerciseRecordModal'
+import PeriodRecordModal from './modals/PeriodRecordModal'
+import DietRecordModal from './modals/DietRecordModal'
+
+const TABS = [
+  { key: 'today', label: '今天', icon: 'today' },
+  { key: 'mood', label: '心绪', icon: 'mood' },
+  { key: 'calendar', label: '月历', icon: 'calendar' },
+  { key: 'body', label: '身体', icon: 'body' },
+  { key: 'inspiration', label: '灵感', icon: 'inspiration' },
+]
+
+const SCREENS = {
+  today: TodayScreen,
+  mood: MoodScreen,
+  calendar: CalendarScreen,
+  body: BodyScreen,
+  inspiration: InspirationScreen,
+}
+
+function generateInitialCalendarTodos() {
+  const t = {}
+  t['2026-07-05'] = [
+    { id: 1, text: '月底项目汇报准备', done: true, color: '#D4A03E' },
+    { id: 2, text: '阅读笔记整理', done: true, color: '#A8C49A' },
+  ]
+  t['2026-07-12'] = [
+    { id: 3, text: '更新健身计划', done: false, color: '#8FB3D9' },
+  ]
+  t['2026-07-19'] = [
+    { id: 4, text: '整理书架', done: true, color: '#D4A03E' },
+  ]
+  t['2026-07-25'] = [
+    { id: 5, text: '预约网球场地', done: false, color: '#A8C49A' },
+    { id: 6, text: '有氧训练 30min', done: false, color: '#8FB3D9' },
+  ]
+  return t
+}
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('today')
+  const [activeModal, setActiveModal] = useState(null)
+  const [modalDate, setModalDate] = useState(null)
+
+  // 心情历史（仅记录已打卡日期，初始为空）
+  const [moodHistory, setMoodHistory] = useState({})
+
+  // 日历待办
+  const [calendarTodos, setCalendarTodos] = useState(() => generateInitialCalendarTodos())
+
+  // 灵感簿数据
+  const [inspirations, setInspirations] = useState([
+    { id: 1, title: '周末徒步路线规划', desc: '从香山到植物园，全程约 8 公里，适合初级徒步者。', tag: '户外', color: '#A8C49A', date: '7月28日' },
+    { id: 2, title: '想学的手冲咖啡技巧', desc: '三段式注水法：闷蒸 30 秒 → 第二段注水 → 第三段注水。水温 88-92°C。', tag: '生活', color: '#D4A03E', date: '7月26日' },
+  ])
+  const [musings, setMusings] = useState([
+    { id: 1, text: '今天路过街角的面包店，闻到了小时候姥姥家厨房的味道。', date: '7月30日', time: '09:15' },
+    { id: 2, text: '有时候放下计划，随性地走走，反而能发现生活中真正重要的东西。', date: '7月29日', time: '18:42' },
+  ])
+
+  // 身体记数据（运动/月事/食光记录 → 持久化到 App 层）
+  const [exerciseRecords, setExerciseRecords] = useState([
+    { id: 1, type: '跑步', duration: 30, calories: 280 },
+    { id: 2, type: '瑜伽', duration: 45, calories: 180 },
+  ])
+  const [periodRecords, setPeriodRecords] = useState([
+    { id: 1, text: '7月18日 经期开始', status: '中' },
+    { id: 2, text: '7月19日 量多，有腹痛', status: '多' },
+  ])
+  const [dietRecords, setDietRecords] = useState([
+    { id: 1, meal: '早餐', content: '燕麦粥 + 水煮蛋 + 香蕉', cal: 420 },
+    { id: 2, meal: '午餐', content: '鸡胸肉沙拉 + 全麦面包', cal: 580 },
+    { id: 3, meal: '晚餐', content: '清蒸鱼 + 西兰花 + 糙米饭', cal: 680 },
+  ])
+
+  const todayKey = '2026-07-31'
+
+  /* ── 回调 ── */
+  const openDateModal = useCallback((dateKey) => {
+    setModalDate(dateKey)
+    setActiveModal('dateTodo')
+  }, [])
+
+  const handleMoodChange = useCallback((dateKey, mood) => {
+    setMoodHistory(prev => ({ ...prev, [dateKey]: mood }))
+  }, [])
+
+  const handleCalendarTodosChange = useCallback((dateKey, todos) => {
+    setCalendarTodos(prev => {
+      const next = { ...prev }
+      if (todos.length === 0) delete next[dateKey]
+      else next[dateKey] = todos
+      return next
+    })
+  }, [])
+
+  const getDateTodos = (dateKey) => calendarTodos[dateKey] || []
+
+  const screenProps = {
+    onOpenModal: (type) => { setModalDate(null); setActiveModal(type) },
+    todayKey,
+    moodHistory,
+    onMoodChange: handleMoodChange,
+    calendarTodos,
+    onCalendarTodosChange: handleCalendarTodosChange,
+    openDateModal,
+    // 灵感簿
+    inspirations, setInspirations,
+    musings, setMusings,
+    // 身体记
+    exerciseRecords, setExerciseRecords,
+    periodRecords, setPeriodRecords,
+    dietRecords, setDietRecords,
+  }
+
+  return (
+    <ErrorBoundary>
+    <div className="app-layout">
+      <aside className="sidebar">
+        <div className="sidebar-brand">
+          <h1>生活手账</h1>
+          <span>Life Journal</span>
+        </div>
+        <nav className="sidebar-nav">
+          {TABS.map((tab) => {
+            const Icon = tabIcons[tab.icon]
+            const isActive = activeTab === tab.key
+            return (
+              <button key={tab.key} className={`sidebar-nav-item ${isActive ? 'active' : ''}`} onClick={() => setActiveTab(tab.key)}>
+                <span className="sidebar-nav-icon"><Icon color={isActive ? '#7B4F2C' : '#9C856B'} /></span>
+                <span className="sidebar-nav-label">{tab.label}</span>
+              </button>
+            )
+          })}
+        </nav>
+        <div className="sidebar-footer"><p className="sidebar-footer-text">温暖手账 · 记录每一天</p></div>
+      </aside>
+
+      <main className="main-content">
+        <div className="content-container">
+          <ActiveScreen {...screenProps} />
+        </div>
+      </main>
+
+      <nav className="bottom-tab-bar">
+        <div className="bottom-tab-pill">
+          {TABS.map((tab) => {
+            const Icon = tabIcons[tab.icon]
+            const isActive = activeTab === tab.key
+            return (
+              <button key={tab.key} className={`bottom-tab-item ${isActive ? 'active' : ''}`} onClick={() => setActiveTab(tab.key)}>
+                <Icon size={22} color={isActive ? '#7B4F2C' : '#9C856B'} />
+                <span className="bottom-tab-label">{tab.label}</span>
+              </button>
+            )
+          })}
+        </div>
+      </nav>
+
+      {/* ── 弹层 ── */}
+      <DateTodoModal
+        isOpen={activeModal === 'dateTodo'} onClose={() => setActiveModal(null)}
+        dateKey={modalDate || todayKey}
+        initialTodos={getDateTodos(modalDate || todayKey)}
+        onSave={(todos) => handleCalendarTodosChange(modalDate || todayKey, todos)}
+      />
+      <ExerciseRecordModal
+        isOpen={activeModal === 'exercise'} onClose={() => setActiveModal(null)}
+        records={exerciseRecords} onRecordsChange={setExerciseRecords}
+      />
+      <PeriodRecordModal
+        isOpen={activeModal === 'period'} onClose={() => setActiveModal(null)}
+        records={periodRecords} onRecordsChange={setPeriodRecords}
+      />
+      <DietRecordModal
+        isOpen={activeModal === 'diet'} onClose={() => setActiveModal(null)}
+        records={dietRecords} onRecordsChange={setDietRecords}
+      />
+    </div>
+    </ErrorBoundary>
+  )
+}

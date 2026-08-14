@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test</title>
+  <style>
+    body { margin: 0; font-family: sans-serif; background: #F5EDE3; }
+    h1 { color: #7B4F2C; padding: 40px; }
+  </style>
+</head>
+<body>
+  <h1>Hello! 如果你看到这行字，说明服务器工作正常。</h1>
+  <div id="root"></div>
+  <script type="module">
+    import React from 'https://esm.sh/react@18';
+    import ReactDOM from 'https://esm.sh/react-dom@18/client';
+    try {
+      const root = ReactDOM.createRoot(document.getElementById('root'));
+      root.render(React.createElement('div', { style: { padding: '40px', fontSize: '18px' } }, 'React 渲染成功！'));
+    } catch(e) {
+      document.getElementById('root').textContent = 'React Error: ' + e.message;
+    }
+  </script>
+</body>
+</html>

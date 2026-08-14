@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Icon Generator</title></head><body>
+<canvas id="c" width="512" height="512"></canvas>
+<script>
+const c = document.getElementById('c')
+const ctx = c.getContext('2d')
+// 圆角矩形背景
+const r = 60, m = 30
+ctx.fillStyle = '#7B4F2C'
+ctx.beginPath()
+ctx.moveTo(m + r, m)
+ctx.lineTo(512 - m - r, m)
+ctx.arcTo(512 - m, m, 512 - m, m + r, r)
+ctx.lineTo(512 - m, 512 - m - r)
+ctx.arcTo(512 - m, 512 - m, 512 - m - r, 512 - m, r)
+ctx.lineTo(m + r, 512 - m)
+ctx.arcTo(m, 512 - m, m, 512 - m - r, r)
+ctx.lineTo(m, m + r)
+ctx.arcTo(m, m, m + r, m, r)
+ctx.fill()
+// 文字
+ctx.fillStyle = '#FFFCF8'
+ctx.font = 'bold 140px "Noto Serif SC", "STSong", serif'
+ctx.textAlign = 'center'
+ctx.textBaseline = 'middle'
+ctx.fillText('手账', 256, 256)
+// 下载
+c.toBlob(b => {
+  const a = document.createElement('a')
+  a.href = URL.createObjectURL(b)
+  a.download = 'icon-512.png'
+  document.body.appendChild(a)
+  a.click()
+  alert('请把下载的 icon-512.png 放到 life-journal-workbench/public/ 文件夹，\n然后刷新此页面生成 192 版本')
+})
+</script>
+</body></html>

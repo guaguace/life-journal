@@ -1,0 +1,113 @@
+/* ===== 生活手账 · 设计令牌 (Design Tokens) ===== */
+/* 严格来源于 design-tokens.json，请勿自创配色 */
+
+:root {
+  /* ── 品牌色 ── */
+  --color-espresso:  #7B4F2C;
+  --color-caramel:   #B8763A;
+  --color-honey:     #D4A03E;
+  --color-taupe:     #6B5644;
+  --color-cream:     #F5EDE3;
+  --color-card-white:#FFFCF8;
+  --color-warm-gray: #9C856B;
+  --color-ink:       #2D1F14;
+
+  /* ── 心情色 ── */
+  --mood-excited: #E05656;
+  --mood-happy:   #ED8A7D;
+  --mood-calm:    #F0D78A;
+  --mood-low:     #8FB3D9;
+  --mood-sad:     #6E93C0;
+
+  /* ── 文字色 ── */
+  --text-primary:   #2D1F14;
+  --text-secondary: #6B5644;
+  --text-disabled:  #9C856B;
+
+  /* ── 语义角色 ── */
+  --semantic-primary:        #7B4F2C;
+  --semantic-primary-active: #7B4F2C;
+  --semantic-accent:         #D4A03E;
+  --semantic-card-bg:        #FFFCF8;
+  --semantic-page-bg:        #F5EDE3;
+  --semantic-chip-filled-bg:   #7B4F2C;
+  --semantic-chip-soft-bg:     #F5EDE3;
+  --semantic-chip-soft-text:   #6B5644;
+  --semantic-chip-filled-text: #FFFCF8;
+
+  /* ── 字体 ── */
+  --font-title:  'Noto Serif SC', 'Source Han Serif SC', 'STSong', 'SimSun', 'Songti SC', serif;
+  --font-body:   'Noto Sans SC', 'Source Han Sans SC', 'PingFang SC', 'Microsoft YaHei', 'Hiragino Sans GB', sans-serif;
+  --font-number: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+
+  /* ── 字号 ── */
+  --fs-display:   22px;
+  --fs-title:     16px;
+  --fs-card-title:15px;
+  --fs-body:      14px;
+  --fs-label:     12px;
+  --fs-caption:   11px;
+  --fs-mood-label:10px;
+
+  /* ── 字重 ── */
+  --fw-display:   600;
+  --fw-title:     600;
+  --fw-card-title:600;
+  --fw-body:      400;
+  --fw-label:     500;
+  --fw-caption:   400;
+  --fw-mood-label:400;
+
+  /* ── 圆角 ── */
+  --radius-card:   20px;
+  --radius-chip:   14px;
+  --radius-pill:   33px;
+  --radius-tab-pill:33px;
+  --radius-button: 13px;
+  --radius-note:   10px;
+  --radius-check:  12px;
+
+  /* ── 间距 ── */
+  --spacing-page-x: 20px;
+  --spacing-card-padding: 16px;
+  --spacing-stack-gap: 16px;
+  --spacing-item-gap: 10px;
+  --spacing-chip-gap: 8px;
+
+  /* ── 阴影 ── */
+  --shadow-card: 0 2px 12px rgba(31, 20, 10, 0.07);
+
+  /* ── 组件令牌 ── */
+  /* Tab Bar */
+  --tab-pill-bg: #FFFCF8;
+  --tab-height: 66px;
+  --tab-icon-size: 22px;
+  --tab-label-size: 11px;
+  --tab-active-color: #7B4F2C;
+  --tab-inactive-color: #9C856B;
+
+  /* AI Input Bar */
+  --ai-input-bg: #FFFCF8;
+  --ai-input-radius: 14px;
+  --ai-input-padding: 4px;
+  --ai-icon-btn-size: 30px;
+  --ai-icon-btn-radius: 15px;
+
+  /* Todo Item */
+  --todo-bg: #FFFCF8;
+  --todo-radius: 12px;
+  --todo-padding-y: 12px;
+  --todo-padding-x: 12px;
+  --todo-height: 44px;
+  --todo-check-size: 20px;
+
+  /* Chip */
+  --chip-height: 33px;
+  --chip-padding-x: 12px;
+  --chip-radius: 14px;
+  --chip-font-size: 12px;
+
+  /* ── 布局 ── */
+  --sidebar-width: 220px;
+  --content-max-width: 960px;
+}
