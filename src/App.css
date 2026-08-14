@@ -323,6 +323,49 @@ body {
   color: var(--semantic-chip-soft-text);
 }
 
+/* ── 全局交互润色 ── */
+/* 所有按钮统一的按压/过渡手感 */
+button {
+  transition: transform 0.12s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease, border-color 0.2s ease;
+}
+button:active:not(:disabled) { transform: scale(0.96); }
+button:focus-visible { outline: 2px solid #7B4F2C; outline-offset: 2px; }
+
+/* 卡片：hover 轻浮 + 进入过渡 */
+.card { transition: box-shadow 0.25s ease, transform 0.25s ease; }
+@media (hover: hover) {
+  .card:hover {
+    box-shadow: 0 6px 22px rgba(31, 20, 10, 0.10);
+  }
+}
+
+/* 页面切换动画 */
+.screen-enter { animation: screenIn 0.28s cubic-bezier(0.22, 0.61, 0.36, 1); }
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* 「记录」小按钮 */
+.record-btn {
+  display: inline-flex; align-items: center; gap: 4px;
+  border: none; background: rgba(123, 79, 44, 0.07);
+  color: #7B4F2C; font-family: var(--font-body);
+  font-size: var(--fs-label); font-weight: 500;
+  padding: 6px 12px; border-radius: 10px; cursor: pointer;
+  white-space: nowrap;
+}
+.record-btn:hover { background: rgba(123, 79, 44, 0.13); }
+
+/* 列表行 hover 反馈 */
+.modal-list-item { transition: background 0.2s ease, border-color 0.2s ease; }
+.modal-list-item:hover { background: rgba(123, 79, 44, 0.05); }
+
+@media (prefers-reduced-motion: reduce) {
+  .screen-enter { animation: none; }
+  button, .card, .modal-list-item { transition: none; }
+}
+
 /* ── Bottom Sheet 弹层 (Screen 6–9) ── */
 .bottom-sheet-overlay {
   position: fixed;

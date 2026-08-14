@@ -164,7 +164,9 @@ export default function App() {
         background: '#F5EDE3',
       }}>
         <div style={{ maxWidth: isMobile ? '100%' : 960, margin: '0 auto' }}>
-          <ActiveScreen {...screenProps} />
+          <div key={activeTab} className="screen-enter">
+            <ActiveScreen {...screenProps} />
+          </div>
         </div>
       </main>
 

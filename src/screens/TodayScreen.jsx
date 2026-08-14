@@ -23,24 +23,34 @@ function MoodSelector({ todayKey, moodHistory, onMoodChange }) {
           {hasCheckedIn ? '已打卡 ✓' : '今日未打卡'}
         </span>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-around', paddingTop: 4 }}>
+      <div style={{ display: 'flex', paddingTop: 4, gap: 2 }}>
         {MOOD_OPTIONS.map((mood) => {
           const Icon = moodIcons[mood.key]
           const isSelected = currentMood === mood.key
+          // 小屏适配：flex:1 均分宽度，选中图标适度放大（52px），不再溢出
           return (
-            <button key={mood.key} onClick={() => onMoodChange(todayKey, mood.key)} style={{
-              display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8,
-              cursor: 'pointer', border: isSelected ? '2px solid #7B4F2C' : '2px solid transparent',
-              background: isSelected ? 'rgba(123, 79, 44, 0.05)' : 'transparent',
-              padding: '8px 12px', borderRadius: 16, transition: 'all 0.25s',
-              transform: isSelected ? 'scale(1.05)' : 'scale(1)',
-            }}>
-              <Icon size={isSelected ? 56 : 44} />
+            <button
+              key={mood.key}
+              onClick={() => onMoodChange(todayKey, mood.key)}
+              style={{
+                flex: 1, minWidth: 0,
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                gap: 6, cursor: 'pointer',
+                border: isSelected ? '2px solid #7B4F2C' : '2px solid transparent',
+                background: isSelected ? 'rgba(123, 79, 44, 0.05)' : 'transparent',
+                padding: '6px 2px', borderRadius: 14,
+                transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              <Icon size={isSelected ? 52 : 40} />
               <span style={{
                 fontSize: 'var(--fs-mood-label)', fontFamily: 'var(--font-body)',
                 fontWeight: isSelected ? 600 : 400,
                 color: isSelected ? '#7B4F2C' : '#6B5644',
-              }}>{mood.label}</span>
+                whiteSpace: 'nowrap',
+              }}>
+                {mood.label}
+              </span>
             </button>
           )
         })}
