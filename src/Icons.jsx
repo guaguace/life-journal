@@ -132,6 +132,14 @@ export const IconSun = ({ size = 16, color = 'currentColor' }) => (
   </svg>
 );
 
+/* ── 设置/我的 ── */
+export const IconSettings = ({ size = 24, color = 'currentColor' }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="3" stroke={color} strokeWidth="1.8"/>
+    <path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1" stroke={color} strokeWidth="1.8" strokeLinecap="round"/>
+  </svg>
+);
+
 /* ── 心情表情图标 (颜色匹配新版 design-tokens.json moodCard.options.faceColor) ── */
 /* excited / 兴奋 — faceColor: #E05656 */
 export const MoodHappy = ({ size = 44 }) => (
@@ -208,4 +216,5 @@ export const tabIcons = {
   calendar: IconTabCalendar,
   body: IconTabActivity,
   inspiration: IconTabBulb,
+  settings: IconSettings,
 };

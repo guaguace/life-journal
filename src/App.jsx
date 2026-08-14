@@ -23,6 +23,7 @@ import { MoodScreen } from './screens/MoodScreen'
 import { CalendarScreen } from './screens/CalendarScreen'
 import { BodyScreen } from './screens/BodyScreen'
 import { InspirationScreen } from './screens/InspirationScreen'
+import { SettingsScreen } from './screens/SettingsScreen'
 import DateTodoModal from './modals/DateTodoModal'
 import ExerciseRecordModal from './modals/ExerciseRecordModal'
 import PeriodRecordModal from './modals/PeriodRecordModal'
@@ -35,6 +36,7 @@ const TABS = [
   { key: 'calendar', label: '月历', icon: 'calendar' },
   { key: 'body', label: '身体', icon: 'body' },
   { key: 'inspiration', label: '灵感', icon: 'inspiration' },
+  { key: 'settings', label: '我的', icon: 'settings' },
 ]
 
 const SCREENS = {
@@ -43,6 +45,7 @@ const SCREENS = {
   calendar: CalendarScreen,
   body: BodyScreen,
   inspiration: InspirationScreen,
+  settings: SettingsScreen,
 }
 
 function genCalendarTodos() {
