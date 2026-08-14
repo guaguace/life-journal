@@ -13,6 +13,7 @@ function useStoredState(key, initialValue) {
   useEffect(() => {
     try { localStorage.setItem('lifejournal_' + key, JSON.stringify(state)) }
     catch (e) { /* quota exceeded */ }
+    scheduleCloudPush()
   }, [key, state])
 
   return [state, setState]
@@ -29,6 +30,15 @@ import ExerciseRecordModal from './modals/ExerciseRecordModal'
 import PeriodRecordModal from './modals/PeriodRecordModal'
 import DietRecordModal from './modals/DietRecordModal'
 import './App.css'
+import { isSyncEnabled, pushToCloud, pullFromCloud } from './sync'
+
+/* 数据变化后防抖自动上传云端 */
+let pushTimer = null
+function scheduleCloudPush() {
+  if (!isSyncEnabled()) return
+  clearTimeout(pushTimer)
+  pushTimer = setTimeout(() => { pushToCloud().catch(() => {}) }, 2500)
+}
 
 const TABS = [
   { key: 'today', label: '今天', icon: 'today' },
@@ -116,6 +126,17 @@ export default function App() {
     exerciseRecords, setExerciseRecords, periodRecords, setPeriodRecords, dietRecords, setDietRecords,
     sleepRecords, onSleepRecord: handleSleepRecord,
   }
+
+  // 启动时若已启用云端同步：从云端拉取最新数据
+  useEffect(() => {
+    if (!isSyncEnabled()) return
+    pullFromCloud().then(r => {
+      if (r && r.applied) {
+        // 云端数据已应用，刷新以加载
+        window.location.reload()
+      }
+    }).catch(() => {})
+  }, [])
 
   // 移动端检测
   const [isMobile, setIsMobile] = useState(() => window.innerWidth < 768)
