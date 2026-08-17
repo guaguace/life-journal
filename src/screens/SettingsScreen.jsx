@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react'
 import { getSyncConfig, setSyncConfig, pushToCloud, pullFromCloud } from '../sync'
+import { getAIConfig, setAIConfig, AI_MODELS } from '../ai'
 
 /* 统计当前设备上的数据量（排除同步配置） */
 function countData() {
@@ -42,6 +43,8 @@ export function SettingsScreen() {
   const [syncMsg, setSyncMsg] = useState('')
   const [busy, setBusy] = useState(false)
   const [cfg, setCfg] = useState(() => getSyncConfig() || { url: '', key: '', code: '' })
+  const [aiCfg, setAiCfg] = useState(() => getAIConfig() || { key: '', model: 'claude-opus-5' })
+  const [aiMsg, setAiMsg] = useState('')
 
   const handleImport = (e) => {
     const file = e.target.files[0]
@@ -125,6 +128,48 @@ export function SettingsScreen() {
       <div className="page-header">
         <h2>我的</h2>
         <p className="subtitle">云端同步 · 数据备份 · 设置</p>
+      </div>
+
+      {/* ── AI 知己 ── */}
+      <div className="card">
+        <div className="card-header">
+          <h3 className="card-title">✨ AI 知己</h3>
+        </div>
+        <p style={{ fontSize: 'var(--fs-caption)', fontFamily: 'var(--font-body)', color: '#9C856B', lineHeight: 1.7, marginBottom: 14 }}>
+          配置后即可在「今天」页与小记对话：它会读取你的全部记录（心情 / 睡眠 / 运动 / 目标…），帮你剖析状态、引导自我探索。
+          API Key 只保存在本机浏览器，仅发送给 Anthropic 官方 API。
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
+          <div>
+            <div style={labelStyle}>API Key（platform.claude.com → API Keys 获取）</div>
+            <input style={inputStyle} type="password" placeholder="sk-ant-..." value={aiCfg.key}
+              onChange={e => setAiCfg(c => ({ ...c, key: e.target.value }))} />
+          </div>
+          <div>
+            <div style={labelStyle}>模型</div>
+            <select style={inputStyle} value={aiCfg.model}
+              onChange={e => setAiCfg(c => ({ ...c, model: e.target.value }))}>
+              {AI_MODELS.map(m => (
+                <option key={m.id} value={m.id}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+        <button onClick={() => {
+          if (!aiCfg.key.trim()) { setAiMsg('请先填写 API Key'); return }
+          setAIConfig({ key: aiCfg.key.trim(), model: aiCfg.model })
+          setAiMsg('✅ 已保存，去「今天」页和小记聊聊吧')
+        }} style={{
+          width: '100%', height: 40, borderRadius: 13, border: 'none', cursor: 'pointer',
+          background: '#7B4F2C', color: '#FFFCF8', fontFamily: 'var(--font-body)',
+          fontSize: 'var(--fs-label)', fontWeight: 600,
+        }}>
+          {getAIConfig() ? '保存 AI 配置' : '启用 AI 对话'}
+        </button>
+        {aiMsg && <p style={{
+          fontSize: 'var(--fs-caption)', fontFamily: 'var(--font-body)', marginTop: 10,
+          color: aiMsg.startsWith('✅') ? '#52784B' : '#C24040',
+        }}>{aiMsg}</p>}
       </div>
 
       {/* ── 云端同步 ── */}

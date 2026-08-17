@@ -1,5 +1,7 @@
-import React from 'react'
+import React, { useState, useEffect, useRef } from 'react'
+import Anthropic from '@anthropic-ai/sdk'
 import { moodIcons, IconImage, IconMic, IconCheck } from '../Icons'
+import { getAIConfig, getChatHistory, AI_SYSTEM_PROMPT, buildContext } from '../ai'
 
 const MOOD_OPTIONS = [
   { key: 'excited', label: '兴奋' },
@@ -66,14 +68,240 @@ function MoodSelector({ todayKey, moodHistory, onMoodChange }) {
   )
 }
 
-function AIChatCard() {
+/* ── 与 AI 聊天：读取全部数据作为上下文，引导自我探索 ── */
+function AIChat({ aiData }) {
+  const [cfg] = useState(() => getAIConfig())
+  const [messages, setMessages] = useState(() => getChatHistory().slice(-30))
+  const [input, setInput] = useState('')
+  const [pendingImage, setPendingImage] = useState(null) // { media_type, data }
+  const [busy, setBusy] = useState(false)
+  const [notice, setNotice] = useState('')
+  const listRef = useRef(null)
+  const fileRef = useRef(null)
+
+  /* 新消息自动滚到底部 */
+  useEffect(() => {
+    const el = listRef.current
+    if (el) el.scrollTop = el.scrollHeight
+  }, [messages, busy, pendingImage])
+
+  /* 持久化（仅文本，图片不落盘） */
+  const persist = (msgs) => {
+    const clean = msgs.map(m => ({
+      role: m.role,
+      content: Array.isArray(m.content)
+        ? m.content.filter(b => b.type === 'text').map(b => b.text).join('')
+        : m.content,
+    }))
+    try { localStorage.setItem('lifejournal_ai_chat', JSON.stringify(clean.slice(-30))) } catch (e) {}
+  }
+
+  const handlePickImage = (e) => {
+    const file = e.target.files && e.target.files[0]
+    if (!file) return
+    if (!/^image\/(png|jpe?g|gif|webp)$/.test(file.type)) {
+      setNotice('请选择图片文件（png / jpg / gif / webp）')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => setPendingImage({ media_type: file.type, data: String(reader.result).split(',')[1] })
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  const send = async () => {
+    const text = input.trim()
+    if (!text && !pendingImage) return
+    if (!cfg || !cfg.key) {
+      setNotice('请先在「我的」页配置 AI 知己的 API Key')
+      return
+    }
+    setNotice('')
+
+    const userContent = []
+    if (text) userContent.push({ type: 'text', text })
+    if (pendingImage) userContent.push({ type: 'image', source: { type: 'base64', media_type: pendingImage.media_type, data: pendingImage.data } })
+    const userMsg = { role: 'user', content: userContent.length === 1 ? userContent[0] : userContent }
+
+    const next = [...messages, userMsg]
+    setMessages(next)
+    setInput('')
+    setPendingImage(null)
+    setBusy(true)
+    persist(next)
+
+    let acc = ''
+    setMessages([...next, { role: 'assistant', content: '' }])
+
+    try {
+      const client = new Anthropic({ apiKey: cfg.key, dangerouslyAllowBrowser: true })
+      const stream = client.messages.stream({
+        model: cfg.model || 'claude-opus-5',
+        max_tokens: 2048,
+        system: AI_SYSTEM_PROMPT + '\n\n' + buildContext(aiData),
+        messages: next.slice(-20).map(m => ({ role: m.role, content: m.content })),
+      })
+      stream.on('text', (delta) => {
+        acc += delta
+        setMessages(msgs => {
+          const copy = [...msgs]
+          copy[copy.length - 1] = { role: 'assistant', content: acc }
+          return copy
+        })
+      })
+      const final = await stream.finalMessage()
+      if (!acc && final && final.content) {
+        const tb = final.content.find(b => b.type === 'text')
+        acc = tb ? tb.text : ''
+      }
+      if (!acc) acc = '（我好像走神了，再说一次？）'
+    } catch (err) {
+      if (err && err.status === 401) acc = 'API Key 无效，请到「我的」页检查配置。'
+      else if (err && err.status === 429) acc = '提问有点频繁，稍等几秒再试试。'
+      else if (err && err.status === 403) acc = '这个 Key 没有访问权限，请换一个试试。'
+      else acc = '出错了：' + String((err && err.message) || err).slice(0, 100)
+    }
+
+    setBusy(false)
+    setMessages(msgs => {
+      const copy = [...msgs]
+      copy[copy.length - 1] = { role: 'assistant', content: acc }
+      return copy
+    })
+    persist([...next, { role: 'assistant', content: acc }])
+  }
+
+  const clearChat = () => {
+    if (!confirm('清空与小记的对话记录？')) return
+    setMessages([])
+    try { localStorage.removeItem('lifejournal_ai_chat') } catch (e) {}
+  }
+
   return (
     <div className="card">
-      <div className="card-header"><h3 className="card-title">和 AI 聊一聊</h3></div>
+      <div className="card-header">
+        <div>
+          <h3 className="card-title">和 AI 聊一聊</h3>
+          <p style={{ fontSize: 10.5, fontFamily: 'var(--font-body)', color: '#9C856B', marginTop: 2 }}>
+            我是小记 ✨ 我了解你记录的所有心情、睡眠和点滴
+          </p>
+        </div>
+        {messages.length > 0 && (
+          <button onClick={clearChat} style={{
+            border: 'none', background: 'transparent', cursor: 'pointer',
+            fontSize: 11, fontFamily: 'var(--font-body)', color: '#9C856B',
+            textDecoration: 'underline', textUnderlineOffset: 3,
+          }}>清空对话</button>
+        )}
+      </div>
+
+      {/* 消息列表 */}
+      <div ref={listRef} style={{
+        maxHeight: 340, overflowY: 'auto', display: 'flex', flexDirection: 'column',
+        gap: 10, padding: '4px 2px 10px',
+      }}>
+        {messages.length === 0 && !pendingImage && (
+          <p style={{
+            textAlign: 'center', color: '#9C856B', fontSize: 12.5,
+            fontFamily: 'var(--font-body)', lineHeight: 1.7, padding: '14px 8px',
+          }}>
+            试着问我：<br />「最近我状态怎么样？」「为什么总是睡不好？」<br />「我最近开心吗？」
+          </p>
+        )}
+        {messages.map((m, i) => {
+          const isUser = m.role === 'user'
+          const blocks = Array.isArray(m.content) ? m.content : null
+          const imgBlock = blocks ? blocks.find(b => b.type === 'image') : null
+          const textParts = blocks ? blocks.filter(b => b.type === 'text').map(b => b.text) : [m.content]
+          return (
+            <div key={i} style={{
+              alignSelf: isUser ? 'flex-end' : 'flex-start',
+              maxWidth: '85%', display: 'flex', flexDirection: 'column', gap: 4,
+            }}>
+              {imgBlock && (
+                <img
+                  src={`data:${imgBlock.source.media_type};base64,${imgBlock.source.data}`}
+                  alt="发送的图片"
+                  style={{ maxWidth: 160, borderRadius: 12, alignSelf: 'flex-end' }}
+                />
+              )}
+              {textParts.filter(t => t).map((t, ti) => (
+                <div key={ti} style={{
+                  background: isUser ? '#7B4F2C' : '#F5EDE3',
+                  color: isUser ? '#FFFCF8' : '#2D1F14',
+                  borderRadius: isUser ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                  padding: '9px 13px',
+                  fontSize: 'var(--fs-body)', fontFamily: 'var(--font-body)',
+                  lineHeight: 1.65, whiteSpace: 'pre-wrap', wordBreak: 'break-word',
+                }}>
+                  {t || (busy && i === messages.length - 1 ? (
+                    <span style={{ display: 'inline-flex', gap: 4, alignItems: 'center' }}>
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                      <span className="typing-dot" />
+                    </span>
+                  ) : '')}
+                </div>
+              ))}
+            </div>
+          )
+        })}
+
+        {/* 待发送图片预览 */}
+        {pendingImage && (
+          <div style={{ alignSelf: 'flex-end', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
+            <img
+              src={`data:${pendingImage.media_type};base64,${pendingImage.data}`}
+              alt="待发送图片"
+              style={{ maxWidth: 160, borderRadius: 12, opacity: 0.7 }}
+            />
+            <button onClick={() => setPendingImage(null)} style={{
+              border: 'none', background: 'transparent', cursor: 'pointer',
+              fontSize: 11, fontFamily: 'var(--font-body)', color: '#9C856B',
+            }}>移除图片</button>
+          </div>
+        )}
+      </div>
+
+      {notice && (
+        <p style={{ color: '#B8763A', fontSize: 11.5, fontFamily: 'var(--font-body)', margin: '0 2px 8px' }}>
+          {notice}
+        </p>
+      )}
+
+      {/* 输入栏 */}
       <div className="ai-input-bar">
-        <input type="text" placeholder="说说今天想聊什么..." className="ai-input" />
-        <button className="ai-icon-btn" title="上传图片"><IconImage size={18} /></button>
-        <button className="ai-icon-btn" title="语音输入"><IconMic size={18} /></button>
+        <input
+          type="text"
+          placeholder="说说今天想聊什么..."
+          className="ai-input"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => { if (e.key === 'Enter' && !busy) send() }}
+        />
+        <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/gif,image/webp" onChange={handlePickImage} style={{ display: 'none' }} />
+        <button className="ai-icon-btn" title="上传图片" onClick={() => fileRef.current && fileRef.current.click()}>
+          <IconImage size={18} />
+        </button>
+        <button className="ai-icon-btn" title="语音输入（即将上线）" onClick={() => setNotice('语音输入即将上线，先用文字聊聊吧')}>
+          <IconMic size={18} />
+        </button>
+        <button
+          onClick={send}
+          disabled={busy}
+          title="发送"
+          style={{
+            width: 30, height: 30, minWidth: 30, borderRadius: 15, border: 'none',
+            background: busy ? 'rgba(123,79,44,0.25)' : '#7B4F2C',
+            cursor: busy ? 'default' : 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: 0, marginRight: 2,
+          }}
+        >
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none">
+            <path d="M8 13V3M4 7l4-4 4 4" stroke="#FFFCF8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+        </button>
       </div>
     </div>
   )
@@ -232,7 +460,7 @@ function GoalsCard({ goals }) {
   )
 }
 
-export function TodayScreen({ todayKey, moodHistory, onMoodChange, calendarTodos, onCalendarTodosChange, goals }) {
+export function TodayScreen({ todayKey, moodHistory, onMoodChange, calendarTodos, onCalendarTodosChange, goals, aiData }) {
   const weekdays = ['日','一','二','三','四','五','六']
   const d = new Date()
 
@@ -243,7 +471,7 @@ export function TodayScreen({ todayKey, moodHistory, onMoodChange, calendarTodos
         <p className="subtitle">{d.getMonth()+1}月{d.getDate()}日 星期{weekdays[d.getDay()]}</p>
       </div>
       <MoodSelector todayKey={todayKey} moodHistory={moodHistory} onMoodChange={onMoodChange} />
-      <AIChatCard />
+      <AIChat aiData={aiData} />
       <TodoCard todayKey={todayKey} calendarTodos={calendarTodos} onCalendarTodosChange={onCalendarTodosChange} />
       <GoalsCard goals={goals} />
     </>

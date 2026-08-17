@@ -145,6 +145,7 @@ export default function App() {
     exerciseRecords, setExerciseRecords, periodRecords, setPeriodRecords, dietRecords, setDietRecords,
     sleepRecords, onSleepRecord: handleSleepRecord,
     goals, onAddGoal: handleAddGoal, onDeleteGoal: handleDeleteGoal, onUpdateGoal: handleUpdateGoal,
+    aiData: { todayKey, moodHistory, sleepRecords, exerciseRecords, periodRecords, dietRecords, calendarTodos, goals, inspirations, musings },
   }
 
   // 启动时若已启用云端同步：从云端拉取最新数据
