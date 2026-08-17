@@ -196,7 +196,7 @@ export function SettingsScreen() {
                 </select>
               </div>
               <div>
-                <div style={labelStyle}>接口地址（DeepSeek 不支持网页直连，需本地代理，见下方说明）</div>
+                <div style={labelStyle}>接口地址（DeepSeek 不允许网页直连，需代理中转，见下方说明）</div>
                 <input style={inputStyle} value={aiCfg.deepseek?.baseUrl || ''}
                   onChange={e => setProviderField('baseUrl', e.target.value)} />
               </div>
@@ -204,10 +204,11 @@ export function SettingsScreen() {
                 background: 'rgba(212,160,62,0.08)', borderRadius: 12, padding: '10px 12px',
                 fontSize: 'var(--fs-caption)', fontFamily: 'var(--font-body)', color: '#6B5644', lineHeight: 1.7,
               }}>
-                💡 <b>DeepSeek 使用步骤</b>：<br />
-                ① 电脑上安装 Node.js，在项目文件夹运行 <b>node proxy.js</b><br />
-                ② 把上面「接口地址」改成 <b>http://localhost:8787</b><br />
-                ③ 手机访问时填电脑局域网 IP（如 http://192.168.1.5:8787）
+                💡 <b>代理二选一</b>：<br />
+                【推荐 · 云端】Supabase 控制台 → Edge Functions → 新建 <b>ai-proxy</b>，粘贴仓库
+                <b>supabase/functions/ai-proxy/index.ts</b> 代码并部署，关闭该函数的 JWT 校验；
+                接口地址填 <b>https://你的项目ID.supabase.co/functions/v1/ai-proxy</b>（手机也能用，不依赖电脑）<br />
+                【本地】电脑运行 <b>node proxy.js</b>，接口地址填 <b>http://localhost:8787</b>
               </div>
             </>
           )}

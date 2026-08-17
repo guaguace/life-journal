@@ -71,8 +71,10 @@ export function getActiveProvider(cfg) {
   return null
 }
 
-/* 判断是否走代理（http 开头 = 本地代理） */
-function isProxyUrl(url) { return /^http:\/\//i.test(url) }
+/* 判断是否走代理：本地代理（http://）或 Supabase 云端代理（functions/v1） */
+function isProxyUrl(url) {
+  return /^http:\/\//i.test(url) || /functions\/v1/i.test(url)
+}
 
 export const AI_SYSTEM_PROMPT = `你是「小记」——生活在「生活手账」App 里的 AI 知己，一个温暖、敏锐、不做评判的自我探索引导者。
 
