@@ -118,10 +118,19 @@ function AIChat({ aiData }) {
     }
     setNotice('')
 
+    /* 组装用户消息：纯文字用字符串；带图片（仅 Claude 支持）用内容块数组 */
     const userContent = []
     if (text) userContent.push({ type: 'text', text })
-    if (pendingImage) userContent.push({ type: 'image', source: { type: 'base64', media_type: pendingImage.media_type, data: pendingImage.data } })
-    const userMsg = { role: 'user', content: userContent.length === 1 ? userContent[0] : userContent }
+    let withImage = false
+    if (pendingImage) {
+      if (active.type === 'claude') {
+        userContent.push({ type: 'image', source: { type: 'base64', media_type: pendingImage.media_type, data: pendingImage.data } })
+        withImage = true
+      } else {
+        setNotice('当前供应商暂不支持图片，已仅发送文字')
+      }
+    }
+    const userMsg = { role: 'user', content: withImage ? userContent : (text || '') }
 
     const next = [...messages, userMsg]
     setMessages(next)
@@ -200,9 +209,13 @@ function AIChat({ aiData }) {
         )}
         {messages.map((m, i) => {
           const isUser = m.role === 'user'
-          const blocks = Array.isArray(m.content) ? m.content : null
+          /* 兼容三种消息格式：字符串 / 内容块数组 / 单内容块对象 */
+          const blocks = Array.isArray(m.content) ? m.content
+            : (m.content && typeof m.content === 'object' ? [m.content] : null)
           const imgBlock = blocks ? blocks.find(b => b.type === 'image') : null
-          const textParts = blocks ? blocks.filter(b => b.type === 'text').map(b => b.text) : [m.content]
+          let textParts = []
+          if (typeof m.content === 'string') textParts = [m.content]
+          else if (blocks) textParts = blocks.filter(b => b.type === 'text').map(b => b.text)
           return (
             <div key={i} style={{
               alignSelf: isUser ? 'flex-end' : 'flex-start',

@@ -114,17 +114,25 @@ async function openaiStream(def, system, messages, onDelta) {
     'Content-Type': 'application/json',
     'Authorization': 'Bearer ' + def.key,
   }
-  /* 走本地代理时，把真实目标地址放在 x-target-url 里 */
+  /* 走代理（本地 http:// 或 Supabase functions/v1）时，把真实目标地址放在 x-target-url 里 */
   if (isProxyUrl(def.baseUrl) && def.target) {
     headers['x-target-url'] = def.target.replace(/\/+$/, '') + '/chat/completions'
   }
+
+  /* OpenAI 兼容接口只接受字符串消息，把内容块统一压成纯文本 */
+  const cleanMessages = messages.map(m => ({
+    role: m.role,
+    content: Array.isArray(m.content)
+      ? m.content.filter(b => b && b.type === 'text').map(b => b.text).join('')
+      : (typeof m.content === 'string' ? m.content : ''),
+  }))
 
   const res = await fetch(endpoint, {
     method: 'POST',
     headers,
     body: JSON.stringify({
       model: def.model,
-      messages: [{ role: 'system', content: system }, ...messages],
+      messages: [{ role: 'system', content: system }, ...cleanMessages],
       stream: true,
       max_tokens: 2048,
     }),

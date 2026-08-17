@@ -1,4 +1,31 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, Component } from 'react'
+
+/* 渲染出错时显示错误提示而不是白屏 */
+class ScreenBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: null } }
+  static getDerivedStateFromError(error) { return { error } }
+  render() {
+    if (this.state.error) {
+      return (
+        <div style={{
+          padding: 32, fontFamily: 'system-ui, "Microsoft YaHei", sans-serif',
+          color: '#2D1F14', background: '#FFFCF8', borderRadius: 20,
+          boxShadow: '0 2px 12px rgba(31,20,10,0.07)',
+        }}>
+          <h3 style={{ color: '#E05656', marginBottom: 8 }}>页面出错了</h3>
+          <p style={{ fontSize: 13, marginBottom: 14, wordBreak: 'break-word', lineHeight: 1.6 }}>
+            {String((this.state.error && this.state.error.message) || this.state.error)}
+          </p>
+          <button onClick={() => window.location.reload()} style={{
+            padding: '8px 18px', border: 'none', borderRadius: 10,
+            background: '#7B4F2C', color: '#FFFCF8', cursor: 'pointer', fontSize: 13,
+          }}>刷新页面</button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 /* localStorage 持久化 Hook */
 function useStoredState(key, initialValue) {
@@ -210,7 +237,9 @@ export default function App() {
       }}>
         <div style={{ maxWidth: isMobile ? '100%' : 960, margin: '0 auto' }}>
           <div key={activeTab} className="screen-enter">
-            <ActiveScreen {...screenProps} />
+            <ScreenBoundary>
+              <ActiveScreen {...screenProps} />
+            </ScreenBoundary>
           </div>
         </div>
       </main>
