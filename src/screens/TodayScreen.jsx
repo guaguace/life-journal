@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
-import Anthropic from '@anthropic-ai/sdk'
 import { moodIcons, IconImage, IconMic, IconCheck } from '../Icons'
-import { getAIConfig, getChatHistory, AI_SYSTEM_PROMPT, buildContext } from '../ai'
+import { getAIConfig, getActiveProvider, getChatHistory, AI_SYSTEM_PROMPT, buildContext, streamChat, explainError } from '../ai'
 
 const MOOD_OPTIONS = [
   { key: 'excited', label: '兴奋' },
@@ -112,8 +111,9 @@ function AIChat({ aiData }) {
   const send = async () => {
     const text = input.trim()
     if (!text && !pendingImage) return
-    if (!cfg || !cfg.key) {
-      setNotice('请先在「我的」页配置 AI 知己的 API Key')
+    const active = getActiveProvider(cfg)
+    if (!active || !active.key || (active.type === 'openai' && !active.baseUrl && !active.target)) {
+      setNotice('请先在「我的」页配置 AI 知己（选择供应商并填写 API Key）')
       return
     }
     setNotice('')
@@ -134,32 +134,22 @@ function AIChat({ aiData }) {
     setMessages([...next, { role: 'assistant', content: '' }])
 
     try {
-      const client = new Anthropic({ apiKey: cfg.key, dangerouslyAllowBrowser: true })
-      const stream = client.messages.stream({
-        model: cfg.model || 'claude-opus-5',
-        max_tokens: 2048,
-        system: AI_SYSTEM_PROMPT + '\n\n' + buildContext(aiData),
-        messages: next.slice(-20).map(m => ({ role: m.role, content: m.content })),
-      })
-      stream.on('text', (delta) => {
-        acc += delta
-        setMessages(msgs => {
-          const copy = [...msgs]
-          copy[copy.length - 1] = { role: 'assistant', content: acc }
-          return copy
-        })
-      })
-      const final = await stream.finalMessage()
-      if (!acc && final && final.content) {
-        const tb = final.content.find(b => b.type === 'text')
-        acc = tb ? tb.text : ''
-      }
+      await streamChat(
+        cfg,
+        AI_SYSTEM_PROMPT + '\n\n' + buildContext(aiData),
+        next.slice(-20).map(m => ({ role: m.role, content: m.content })),
+        (delta) => {
+          acc += delta
+          setMessages(msgs => {
+            const copy = [...msgs]
+            copy[copy.length - 1] = { role: 'assistant', content: acc }
+            return copy
+          })
+        }
+      )
       if (!acc) acc = '（我好像走神了，再说一次？）'
     } catch (err) {
-      if (err && err.status === 401) acc = 'API Key 无效，请到「我的」页检查配置。'
-      else if (err && err.status === 429) acc = '提问有点频繁，稍等几秒再试试。'
-      else if (err && err.status === 403) acc = '这个 Key 没有访问权限，请换一个试试。'
-      else acc = '出错了：' + String((err && err.message) || err).slice(0, 100)
+      acc = explainError(err)
     }
 
     setBusy(false)

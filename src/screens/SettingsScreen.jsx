@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react'
 import { getSyncConfig, setSyncConfig, pushToCloud, pullFromCloud } from '../sync'
-import { getAIConfig, setAIConfig, AI_MODELS } from '../ai'
+import { getAIConfig, setAIConfig, PROVIDERS, CLAUDE_MODELS, DEEPSEEK_MODELS } from '../ai'
 
 /* 统计当前设备上的数据量（排除同步配置） */
 function countData() {
@@ -43,8 +43,18 @@ export function SettingsScreen() {
   const [syncMsg, setSyncMsg] = useState('')
   const [busy, setBusy] = useState(false)
   const [cfg, setCfg] = useState(() => getSyncConfig() || { url: '', key: '', code: '' })
-  const [aiCfg, setAiCfg] = useState(() => getAIConfig() || { key: '', model: 'claude-opus-5' })
+  const [aiCfg, setAiCfg] = useState(() => getAIConfig() || {
+    provider: 'claude',
+    claude: { key: '', model: 'claude-opus-5' },
+    deepseek: { key: '', model: 'deepseek-chat', baseUrl: 'https://api.deepseek.com/v1' },
+    custom: { key: '', model: '', baseUrl: '', target: '' },
+  })
   const [aiMsg, setAiMsg] = useState('')
+
+  const aiProvider = aiCfg.provider || 'claude'
+  const setProviderField = (field, value) => {
+    setAiCfg(c => ({ ...c, [aiProvider]: { ...(c[aiProvider] || {}), [field]: value } }))
+  }
 
   const handleImport = (e) => {
     const file = e.target.files[0]
@@ -137,27 +147,101 @@ export function SettingsScreen() {
         </div>
         <p style={{ fontSize: 'var(--fs-caption)', fontFamily: 'var(--font-body)', color: '#9C856B', lineHeight: 1.7, marginBottom: 14 }}>
           配置后即可在「今天」页与小记对话：它会读取你的全部记录（心情 / 睡眠 / 运动 / 目标…），帮你剖析状态、引导自我探索。
-          API Key 只保存在本机浏览器，仅发送给 Anthropic 官方 API。
+          支持多个供应商，API Key 只保存在本机浏览器。
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 12 }}>
           <div>
-            <div style={labelStyle}>API Key（platform.claude.com → API Keys 获取）</div>
-            <input style={inputStyle} type="password" placeholder="sk-ant-..." value={aiCfg.key}
-              onChange={e => setAiCfg(c => ({ ...c, key: e.target.value }))} />
-          </div>
-          <div>
-            <div style={labelStyle}>模型</div>
-            <select style={inputStyle} value={aiCfg.model}
-              onChange={e => setAiCfg(c => ({ ...c, model: e.target.value }))}>
-              {AI_MODELS.map(m => (
-                <option key={m.id} value={m.id}>{m.label}</option>
+            <div style={labelStyle}>AI 供应商</div>
+            <select style={inputStyle} value={aiProvider}
+              onChange={e => setAiCfg(c => ({ ...c, provider: e.target.value }))}>
+              {PROVIDERS.map(p => (
+                <option key={p.id} value={p.id}>{p.label}</option>
               ))}
             </select>
           </div>
+
+          {aiProvider === 'claude' && (
+            <>
+              <div>
+                <div style={labelStyle}>API Key（platform.claude.com → API Keys 获取）</div>
+                <input style={inputStyle} type="password" placeholder="sk-ant-..." value={aiCfg.claude?.key || ''}
+                  onChange={e => setProviderField('key', e.target.value)} />
+              </div>
+              <div>
+                <div style={labelStyle}>模型</div>
+                <select style={inputStyle} value={aiCfg.claude?.model || 'claude-opus-5'}
+                  onChange={e => setProviderField('model', e.target.value)}>
+                  {CLAUDE_MODELS.map(m => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
+          {aiProvider === 'deepseek' && (
+            <>
+              <div>
+                <div style={labelStyle}>API Key（platform.deepseek.com → API keys 获取）</div>
+                <input style={inputStyle} type="password" placeholder="sk-..." value={aiCfg.deepseek?.key || ''}
+                  onChange={e => setProviderField('key', e.target.value)} />
+              </div>
+              <div>
+                <div style={labelStyle}>模型</div>
+                <select style={inputStyle} value={aiCfg.deepseek?.model || 'deepseek-chat'}
+                  onChange={e => setProviderField('model', e.target.value)}>
+                  {DEEPSEEK_MODELS.map(m => (
+                    <option key={m.id} value={m.id}>{m.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <div style={labelStyle}>接口地址（DeepSeek 不支持网页直连，需本地代理，见下方说明）</div>
+                <input style={inputStyle} value={aiCfg.deepseek?.baseUrl || ''}
+                  onChange={e => setProviderField('baseUrl', e.target.value)} />
+              </div>
+              <div style={{
+                background: 'rgba(212,160,62,0.08)', borderRadius: 12, padding: '10px 12px',
+                fontSize: 'var(--fs-caption)', fontFamily: 'var(--font-body)', color: '#6B5644', lineHeight: 1.7,
+              }}>
+                💡 <b>DeepSeek 使用步骤</b>：<br />
+                ① 电脑上安装 Node.js，在项目文件夹运行 <b>node proxy.js</b><br />
+                ② 把上面「接口地址」改成 <b>http://localhost:8787</b><br />
+                ③ 手机访问时填电脑局域网 IP（如 http://192.168.1.5:8787）
+              </div>
+            </>
+          )}
+
+          {aiProvider === 'custom' && (
+            <>
+              <div>
+                <div style={labelStyle}>接口地址 Base URL（如 https://api.xxx.com/v1 或代理地址）</div>
+                <input style={inputStyle} value={aiCfg.custom?.baseUrl || ''}
+                  onChange={e => setProviderField('baseUrl', e.target.value)} />
+              </div>
+              <div>
+                <div style={labelStyle}>真实目标地址（仅使用本地代理时填写，通常与上面相同）</div>
+                <input style={inputStyle} value={aiCfg.custom?.target || ''}
+                  onChange={e => setProviderField('target', e.target.value)} />
+              </div>
+              <div>
+                <div style={labelStyle}>API Key</div>
+                <input style={inputStyle} type="password" placeholder="sk-..." value={aiCfg.custom?.key || ''}
+                  onChange={e => setProviderField('key', e.target.value)} />
+              </div>
+              <div>
+                <div style={labelStyle}>模型名称</div>
+                <input style={inputStyle} placeholder="如 deepseek-chat / gpt-4o-mini" value={aiCfg.custom?.model || ''}
+                  onChange={e => setProviderField('model', e.target.value)} />
+              </div>
+            </>
+          )}
         </div>
         <button onClick={() => {
-          if (!aiCfg.key.trim()) { setAiMsg('请先填写 API Key'); return }
-          setAIConfig({ key: aiCfg.key.trim(), model: aiCfg.model })
+          const pc = aiCfg[aiProvider] || {}
+          if (!(pc.key || '').trim()) { setAiMsg('请先填写 API Key'); return }
+          if (aiProvider === 'custom' && !(pc.baseUrl || '').trim()) { setAiMsg('请填写接口地址'); return }
+          setAIConfig(aiCfg)
           setAiMsg('✅ 已保存，去「今天」页和小记聊聊吧')
         }} style={{
           width: '100%', height: 40, borderRadius: 13, border: 'none', cursor: 'pointer',
